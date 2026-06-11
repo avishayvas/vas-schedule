@@ -177,6 +177,24 @@
 
   .msg{text-align:center;padding:50px 20px;color:var(--ink-soft)}
 
+  /* חלון פרטי עבודה */
+  .jd-site{font-family:'Frank Ruhl Libre',serif;font-weight:900;font-size:1.3rem;margin-bottom:2px}
+  .jd-when{font-size:.95rem;font-weight:700;color:var(--gold);margin-bottom:10px}
+  .jd-row{display:flex;gap:8px;align-items:baseline;font-size:.88rem;margin-bottom:7px}
+  .jd-row .ico{width:22px;text-align:center}
+  .note-box{
+    background:var(--gold-soft);border:1px solid #E0C98A;border-radius:12px;
+    padding:11px 14px;margin-top:12px;
+  }
+  .note-box .nb-title{font-weight:700;font-size:.8rem;color:#6E5510;margin-bottom:4px}
+  .note-box .nb-body{font-size:.92rem;line-height:1.55;white-space:pre-wrap}
+  .jd-status{display:inline-block;font-size:.78rem;font-weight:700;border-radius:20px;padding:3px 12px;margin-top:12px}
+  .jd-status.active{background:var(--gold-soft);color:#6E5510}
+  .jd-status.done{background:var(--done-bg);color:var(--done)}
+  .jd-status.cancel{background:#F8ECEC;color:var(--cancel)}
+  .jcard{cursor:pointer}
+  .sheet .jcard{cursor:default}
+
   @media (max-width:640px){
     header{padding:10px 12px}
     header h1{font-size:1.05rem}
@@ -307,10 +325,11 @@ function jobsFor(dk, filterW){
   if(filterW) arr = arr.filter(j=>j.workerId===filterW);
   return arr.sort(jobSort);
 }
-function jcardHtml(j, workerById){
+function jcardHtml(j, workerById, clickDk){
   const w = workerById[j.workerId];
   const timeStr = j.start ? (j.start + (j.end?'–'+j.end:'')) : '';
-  return `<div class="jcard st-${j.status||'planned'}">
+  const click = clickDk ? ` onclick="showJob('${clickDk}','${j.id}')"` : '';
+  return `<div class="jcard st-${j.status||'planned'}"${click}>
     <div class="jrow1">
       ${timeStr?`<span class="jtime">${timeStr}</span>`:''}
       <span class="jsite">${esc(j.site)}</span>
@@ -334,6 +353,31 @@ function showDay(dk){
   document.getElementById('sheetOverlay').classList.add('open');
 }
 function closeSheet(){ document.getElementById('sheetOverlay').classList.remove('open'); }
+function showJob(dk, jobId){
+  const j = (((DATA.jobs||{})[dk])||[]).find(x=>x.id===jobId);
+  if(!j) return;
+  const workerById = {}; (DATA.workers||[]).forEach(w=>workerById[w.id]=w);
+  const w = workerById[j.workerId];
+  const d = new Date(dk+'T00:00');
+  const timeStr = j.start ? (j.start + (j.end?' – '+j.end:'')) : '';
+  document.getElementById('sheetTitle').textContent = 'פרטי עבודה';
+  let html = `<div class="jd-site">${esc(j.site)}</div>
+    <div class="jd-when">יום ${DAY_NAMES[d.getDay()]} ${fmtDay(d)}${timeStr?' · '+timeStr:''}</div>`;
+  if(j.type) html += `<div class="jd-row"><span class="ico">🔧</span><span><b>סוג עבודה:</b> ${esc(j.type)}</span></div>`;
+  if(j.location) html += `<div class="jd-row"><span class="ico">📍</span><span><b>מיקום:</b> ${esc(j.location)}</span></div>`;
+  if(w) html += `<div class="jd-row"><span class="ico">👤</span><span><b>משובץ:</b> ${esc(w.name)}</span></div>`;
+  if(j.notes){
+    html += `<div class="note-box">
+      <div class="nb-title">📋 הערות והנחיות לביצוע</div>
+      <div class="nb-body">${esc(j.notes)}</div>
+    </div>`;
+  }
+  if(j.status && j.status!=='planned'){
+    html += `<div class="jd-status ${j.status}">${STATUS_NAMES[j.status]||''}</div>`;
+  }
+  document.getElementById('sheetBody').innerHTML = html;
+  document.getElementById('sheetOverlay').classList.add('open');
+}
 
 function render(){
   if(!DATA) return;
@@ -385,7 +429,7 @@ function renderWeekTable(filterW){
       html += `<td class="${isToday?'today-col':''}">`;
       dayJobs.forEach(j=>{
         const timeStr = j.start ? (j.start + (j.end?'–'+j.end:'')) : '';
-        html += `<div class="job st-${j.status||'planned'}" onclick="showDay('${dk}')">
+        html += `<div class="job st-${j.status||'planned'}" onclick="showJob('${dk}','${j.id}')">
           ${timeStr?`<span class="jt">${timeStr}</span> `:''}
           <b>${esc(j.site)}</b>
           ${j.location?`<span class="loc">${esc(j.location)}</span>`:''}
@@ -415,7 +459,7 @@ function renderWeekList(filterW){
         <span class="cnt">${dayJobs.length ? dayJobs.length + ' עבודות' : ''}</span>
       </div>`;
     if(dayJobs.length===0){ html += '<div class="empty-day">— אין שיבוצים —</div>'; }
-    else dayJobs.forEach(j=>{ html += jcardHtml(j, workerById); });
+    else dayJobs.forEach(j=>{ html += jcardHtml(j, workerById, dk); });
     html += '</div>';
   });
   return html;
@@ -442,7 +486,7 @@ function renderMonth(filterW){
       <div class="dn">${cur.getDate()}</div>`;
     dayJobs.slice(0,MAX_SHOWN).forEach(j=>{
       const w = workerById[j.workerId];
-      html += `<div class="mjob st-${j.status||'planned'}">
+      html += `<div class="mjob st-${j.status||'planned'}" onclick="event.stopPropagation();showJob('${dk}','${j.id}')">
         ${j.start?`${j.start} `:''}<b>${esc(j.site)}</b>${(!filterW && w)?`<span class="mw"> · ${esc(w.name)}</span>`:''}
       </div>`;
     });
