@@ -309,6 +309,15 @@
           <button type="button" class="mini-btn" onclick="shiftJobDate(7)">◀ שבוע קדימה</button>
           <button type="button" class="mini-btn" onclick="shiftJobDate(-7)">שבוע אחורה ▶</button>
         </div>
+        <button type="button" class="mini-link" id="rangeToggle" onclick="toggleRange()">＋ שיבוץ לכמה ימים ברצף</button>
+        <div id="rangeBox" style="display:none;margin-top:6px;padding:8px 10px;background:#FDFCF9;border:1px solid var(--line);border-radius:8px">
+          <label style="display:block;font-size:.78rem;font-weight:600;color:var(--ink-soft);margin-bottom:4px">עד תאריך (כולל) <span id="jobDateEndName" style="font-weight:400;color:var(--gold)"></span></label>
+          <input type="date" id="jobDateEnd" onchange="updateJobDateEndName()" style="width:100%;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-family:inherit;font-size:.9rem;background:#fff">
+          <label style="display:flex;align-items:center;gap:7px;font-size:.8rem;margin-top:7px;cursor:pointer">
+            <input type="checkbox" id="inclFriday" checked style="width:auto"> כולל ימי שישי
+          </label>
+          <div style="font-size:.7rem;color:var(--ink-soft);margin-top:4px">שבתות מדולגות אוטומטית</div>
+        </div>
       </div>
     </div>
     <div class="field">
@@ -754,6 +763,23 @@ function updateJobDateName(){
   const v = document.getElementById('jobDate').value;
   document.getElementById('jobDateName').textContent = v ? '— יום ' + FULL_DAY_NAMES[new Date(v+'T00:00').getDay()] : '';
 }
+let rangeMode = false;
+function setRangeMode(on){
+  rangeMode = on;
+  document.getElementById('rangeBox').style.display = on ? 'block' : 'none';
+  document.getElementById('rangeToggle').textContent = on ? '− חזרה ליום בודד' : '＋ שיבוץ לכמה ימים ברצף';
+}
+function toggleRange(){
+  setRangeMode(!rangeMode);
+  if(rangeMode && !document.getElementById('jobDateEnd').value){
+    document.getElementById('jobDateEnd').value = document.getElementById('jobDate').value;
+    updateJobDateEndName();
+  }
+}
+function updateJobDateEndName(){
+  const v = document.getElementById('jobDateEnd').value;
+  document.getElementById('jobDateEndName').textContent = v ? '— יום ' + FULL_DAY_NAMES[new Date(v+'T00:00').getDay()] : '';
+}
 function shiftJobDate(n){
   const inp = document.getElementById('jobDate');
   if(!inp.value) return;
@@ -770,7 +796,10 @@ function openJobModal(dk, jobId, presetWorker){
   document.getElementById('jobSiteNew').value='';
   document.getElementById('jobTypeNew').value='';
   setMultiMode(false);
+  setRangeMode(false);
+  document.getElementById('jobDateEnd').value='';
   document.getElementById('multiToggle').style.display = jobId ? 'none' : 'inline';
+  document.getElementById('rangeToggle').style.display = jobId ? 'none' : 'inline';
 
   if(jobId){
     const j = (jobs[dk]||[]).find(x=>x.id===jobId);
@@ -865,13 +894,33 @@ async function saveJob(){
   } else {
     workerIds = [document.getElementById('jobWorker').value];
   }
-  jobs[newDk] = jobs[newDk]||[];
-  workerIds.forEach(wid=>jobs[newDk].push({id:uid(), ...data, workerId:wid}));
+  // רשימת התאריכים — יום בודד או טווח
+  let dks = [newDk];
+  if(rangeMode){
+    const endV = document.getElementById('jobDateEnd').value;
+    if(!endV){ toast('חסר תאריך סיום לטווח'); return; }
+    if(endV < newDk){ toast('תאריך הסיום לפני תאריך ההתחלה'); return; }
+    const inclFri = document.getElementById('inclFriday').checked;
+    dks = [];
+    const d = new Date(newDk+'T00:00'), end = new Date(endV+'T00:00');
+    while(d <= end){
+      const dow = d.getDay();
+      if(dow!==6 && (dow!==5 || inclFri)) dks.push(dateKey(d));
+      d.setDate(d.getDate()+1);
+    }
+    if(dks.length===0){ toast('אין ימי עבודה בטווח שנבחר'); return; }
+    if(dks.length>31){ toast('הטווח ארוך מדי (מקסימום חודש)'); return; }
+  }
+  dks.forEach(dk2=>{
+    jobs[dk2] = jobs[dk2]||[];
+    workerIds.forEach(wid=>jobs[dk2].push({id:uid(), ...data, workerId:wid}));
+  });
   await persistJobs();
   closeJobModal();
   weekStart = getWeekStart(new Date(newDk+'T00:00'));
   render();
-  toast(workerIds.length>1 ? 'נשמרו '+workerIds.length+' שיבוצים ✓' : 'נשמר ✓');
+  const total = dks.length * workerIds.length;
+  toast(total>1 ? 'נשמרו '+total+' שיבוצים ✓' : 'נשמר ✓');
 }
 async function deleteJob(){
   if(!editingJob) return;
