@@ -13,69 +13,144 @@
     --done:#2E7D46; --done-bg:#E2F2E7; --cancel:#A33A3A;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Heebo',system-ui,sans-serif;background:var(--paper);color:var(--ink);min-height:100vh;padding-bottom:40px}
+  body{font-family:'Heebo',system-ui,sans-serif;background:var(--paper);color:var(--ink);min-height:100vh;padding-bottom:50px}
   header{
-    background:var(--ink);color:#F6F3EC;padding:14px 18px;border-bottom:3px solid var(--gold);
-    text-align:center;
+    background:var(--ink);color:#F6F3EC;padding:12px 18px;border-bottom:3px solid var(--gold);text-align:center;
   }
-  header h1{font-family:'Frank Ruhl Libre',serif;font-weight:900;font-size:1.25rem;letter-spacing:.5px}
-  header small{color:var(--gold);font-size:.7rem;letter-spacing:2px;display:block;margin-top:2px}
-  .updated{font-size:.7rem;color:#C9C2B0;margin-top:6px}
+  header h1{font-family:'Frank Ruhl Libre',serif;font-weight:900;font-size:1.2rem;letter-spacing:.5px}
+  header small{color:var(--gold);font-size:.68rem;letter-spacing:2px;display:block;margin-top:2px}
+  .updated{font-size:.68rem;color:#C9C2B0;margin-top:5px}
+
   .controls{
-    display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;
-    padding:14px;
+    display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;padding:12px 14px 4px;
   }
   .controls select{
-    padding:9px 14px;border:1px solid var(--line);border-radius:8px;
-    font-family:inherit;font-size:.9rem;background:var(--surface);min-width:160px;
+    padding:8px 12px;border:1px solid var(--line);border-radius:8px;
+    font-family:inherit;font-size:.88rem;background:var(--surface);
   }
   button{
     font-family:inherit;cursor:pointer;border:none;border-radius:8px;
-    font-size:.85rem;font-weight:600;padding:9px 14px;transition:.15s;
+    font-size:.84rem;font-weight:600;padding:8px 13px;transition:.15s;
   }
   .btn-light{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
   .btn-light:hover{border-color:var(--gold);color:var(--gold)}
   .btn-gold{background:var(--gold);color:#fff}
-  .week-label{font-weight:700;font-size:.92rem;padding:0 6px}
+  .range-label{font-weight:700;font-size:.92rem;padding:0 4px;min-width:120px;text-align:center}
 
-  .content{max-width:640px;margin:0 auto;padding:0 14px}
-  .day-block{margin-bottom:18px}
+  .toggles{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:6px 14px 12px}
+  .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+  .seg button{border-radius:0;background:var(--surface);color:var(--ink-soft);padding:7px 16px;font-size:.8rem}
+  .seg button.on{background:var(--gold);color:#fff}
+
+  .content{padding:0 12px;max-width:1100px;margin:0 auto}
+
+  /* ===== LIST ===== */
+  .day-block{margin-bottom:16px;max-width:640px;margin-inline:auto}
   .day-head{
-    font-family:'Frank Ruhl Libre',serif;font-weight:900;font-size:1.02rem;color:#6E5510;
-    background:var(--gold-soft);border-radius:10px;padding:7px 14px;margin-bottom:8px;
+    font-family:'Frank Ruhl Libre',serif;font-weight:900;font-size:1rem;color:#6E5510;
+    background:var(--gold-soft);border-radius:10px;padding:6px 14px;margin-bottom:8px;
     display:flex;justify-content:space-between;align-items:baseline;
   }
   .day-head.today{outline:2px solid var(--gold)}
-  .day-head .cnt{font-family:'Heebo';font-size:.72rem;font-weight:600;color:var(--ink-soft)}
+  .day-head .cnt{font-family:'Heebo';font-size:.7rem;font-weight:600;color:var(--ink-soft)}
   .jcard{
     background:var(--surface);border:1px solid var(--line);border-radius:12px;
-    padding:11px 14px;margin-bottom:8px;border-inline-start:4px solid #DCD6C5;
+    padding:10px 14px;margin-bottom:8px;border-inline-start:4px solid #DCD6C5;
   }
   .jcard.st-active{border-inline-start-color:var(--gold)}
   .jcard.st-done{border-inline-start-color:var(--done);opacity:.8}
   .jcard.st-cancel{border-inline-start-color:var(--cancel);opacity:.55;text-decoration:line-through}
   .jrow1{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
-  .jtime{font-weight:700;font-size:.85rem;color:var(--gold);white-space:nowrap}
-  .jsite{font-weight:700;font-size:.95rem;flex:1}
+  .jtime{font-weight:700;font-size:.84rem;color:var(--gold);white-space:nowrap}
+  .jsite{font-weight:700;font-size:.94rem;flex:1}
   .jtag{
-    font-size:.65rem;font-weight:700;border:1px solid var(--ink-soft);color:var(--ink-soft);
+    font-size:.64rem;font-weight:700;border:1px solid var(--ink-soft);color:var(--ink-soft);
     border-radius:20px;padding:1px 8px;white-space:nowrap;
   }
-  .jworker{
-    display:inline-block;font-size:.72rem;font-weight:600;border-radius:20px;padding:2px 9px;margin-top:5px;
-  }
+  .jworker{display:inline-block;font-size:.71rem;font-weight:600;border-radius:20px;padding:2px 9px;margin-top:5px}
   .jworker.employee{background:var(--emp-bg);color:var(--emp)}
   .jworker.contractor{background:var(--contractor-bg);color:var(--contractor)}
-  .jloc{font-size:.8rem;color:var(--ink-soft);margin-top:4px}
-  .jnotes{font-size:.78rem;color:var(--ink-soft);margin-top:3px;font-style:italic}
-  .jstatus{font-size:.7rem;font-weight:700;margin-top:5px;display:inline-block;margin-inline-start:6px}
+  .jloc{font-size:.78rem;color:var(--ink-soft);margin-top:4px}
+  .jnotes{font-size:.76rem;color:var(--ink-soft);margin-top:3px;font-style:italic}
+  .jstatus{font-size:.68rem;font-weight:700;margin-top:5px;display:inline-block;margin-inline-start:6px}
   .st-active .jstatus{color:var(--gold)} .st-done .jstatus{color:var(--done)} .st-cancel .jstatus{color:var(--cancel)}
-  .empty-day{font-size:.8rem;color:#B5AE9C;padding:4px 14px 2px}
+  .empty-day{font-size:.78rem;color:#B5AE9C;padding:2px 14px 4px}
+
+  /* ===== WEEK TABLE ===== */
+  .table-wrap{overflow-x:auto;padding-bottom:8px}
+  table.sched{
+    border-collapse:separate;border-spacing:0;width:100%;min-width:860px;
+    background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden;
+  }
+  .sched th{
+    background:var(--ink);color:#F6F3EC;padding:9px 6px;font-size:.8rem;font-weight:600;
+    border-inline-start:1px solid rgba(255,255,255,.08);
+  }
+  .sched th .dnum{display:block;color:var(--gold);font-size:.7rem;font-weight:500;margin-top:2px}
+  .sched th.today-col{background:#4A4128}
+  .sched th.worker-col{width:140px;text-align:right;padding-inline-start:12px}
+  .sched td{
+    border-top:1px solid var(--line);border-inline-start:1px solid var(--line);
+    vertical-align:top;padding:4px;min-height:54px;height:54px;
+  }
+  td.today-col{background:#FDFAF1}
+  .worker-cell{padding:7px 10px !important;background:#FCFAF5}
+  .worker-name{font-weight:700;font-size:.86rem}
+  .worker-role{font-size:.66rem;font-weight:600;padding:1px 8px;border-radius:20px;display:inline-block;margin-top:3px}
+  .role-employee{background:var(--emp-bg);color:var(--emp)}
+  .role-contractor{background:var(--contractor-bg);color:var(--contractor)}
+  tr.group-row td{
+    background:var(--gold-soft);font-family:'Frank Ruhl Libre',serif;font-weight:900;
+    font-size:.9rem;padding:5px 12px;color:#6E5510;
+  }
+  .job{
+    border-radius:7px;padding:4px 7px;margin-bottom:4px;font-size:.72rem;line-height:1.3;
+    border:1px solid transparent;
+  }
+  .job .jt{font-weight:700;font-size:.68rem}
+  .job b{display:block;font-size:.75rem}
+  .job .loc{opacity:.75}
+  .job.st-planned{background:#F3F1EA;border-color:#DCD6C5;color:#55503F}
+  .job.st-active{background:var(--gold-soft);border-color:#E0C98A;color:#6E5510}
+  .job.st-done{background:var(--done-bg);border-color:#BCDFC7;color:var(--done)}
+  .job.st-cancel{background:#F8ECEC;border-color:#E5C9C9;color:var(--cancel);text-decoration:line-through;opacity:.7}
+
+  /* ===== MONTH ===== */
+  .month-grid{
+    display:grid;grid-template-columns:repeat(7,1fr);gap:5px;
+  }
+  .mh{
+    text-align:center;font-size:.74rem;font-weight:700;color:#6E5510;
+    background:var(--gold-soft);border-radius:7px;padding:4px 0;
+  }
+  .mday{
+    background:var(--surface);border:1px solid var(--line);border-radius:9px;
+    min-height:78px;padding:4px 5px;font-size:.68rem;
+  }
+  .mday.out{opacity:.35;background:transparent}
+  .mday.today{outline:2px solid var(--gold)}
+  .mday .dn{font-weight:700;font-size:.74rem;margin-bottom:2px;color:var(--ink-soft)}
+  .mday.today .dn{color:var(--gold)}
+  .mjob{
+    border-radius:5px;padding:2px 5px;margin-bottom:3px;line-height:1.25;
+    background:#F3F1EA;border:1px solid #DCD6C5;color:#55503F;overflow:hidden;
+  }
+  .mjob.st-active{background:var(--gold-soft);border-color:#E0C98A;color:#6E5510}
+  .mjob.st-done{background:var(--done-bg);border-color:#BCDFC7;color:var(--done)}
+  .mjob.st-cancel{background:#F8ECEC;border-color:#E5C9C9;color:var(--cancel);text-decoration:line-through;opacity:.7}
+  .mjob b{font-weight:700}
+  .mjob .mw{opacity:.8}
+  .more{font-size:.64rem;color:var(--gold);font-weight:700;padding:1px 4px}
+  @media (max-width:560px){
+    .mday{min-height:62px;font-size:.6rem;padding:3px 3px}
+    .mjob .mw{display:none}
+  }
+
   .msg{text-align:center;padding:50px 20px;color:var(--ink-soft)}
   .view-badge{
-    position:fixed;bottom:12px;inset-inline-start:50%;transform:translateX(50%);
-    background:rgba(29,27,22,.85);color:#F6F3EC;font-size:.68rem;padding:5px 14px;border-radius:20px;
-    pointer-events:none;
+    position:fixed;bottom:10px;inset-inline-start:50%;transform:translateX(50%);
+    background:rgba(29,27,22,.85);color:#F6F3EC;font-size:.66rem;padding:5px 14px;border-radius:20px;
+    pointer-events:none;z-index:5;
   }
 </style>
 </head>
@@ -83,16 +158,27 @@
 
 <header>
   <h1>VAS SECURITY</h1>
-  <small>לוז עבודה שבועי</small>
+  <small>לוז עבודה</small>
   <div class="updated" id="updatedAt"></div>
 </header>
 
 <div class="controls">
-  <button class="btn-light" onclick="shiftWeek(1)">◀ הבא</button>
-  <span class="week-label" id="weekLabel"></span>
-  <button class="btn-light" onclick="shiftWeek(-1)">הקודם ▶</button>
+  <button class="btn-light" onclick="nav(1)">◀ הבא</button>
+  <span class="range-label" id="rangeLabel"></span>
+  <button class="btn-light" onclick="nav(-1)">הקודם ▶</button>
   <button class="btn-gold" onclick="goToday()">היום</button>
   <select id="workerFilter" onchange="render()"></select>
+</div>
+
+<div class="toggles">
+  <div class="seg" id="modeSeg">
+    <button data-v="week" class="on" onclick="setMode('week')">שבוע</button>
+    <button data-v="month" onclick="setMode('month')">חודש</button>
+  </div>
+  <div class="seg" id="dispSeg">
+    <button data-v="table" class="on" onclick="setDisplay('table')">טבלה</button>
+    <button data-v="list" onclick="setDisplay('list')">רשימה</button>
+  </div>
 </div>
 
 <div class="content" id="content"><div class="msg">טוען לוז...</div></div>
@@ -103,11 +189,18 @@ const DATA_URLS = [
   'https://raw.githubusercontent.com/avishayvas/vas-schedule/main/data.json',
   './data.json'
 ];
-const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי'];
+const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+const DAY_SHORT = ['א','ב','ג','ד','ה','ו','ש'];
+const MONTH_NAMES = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 const STATUS_NAMES = { planned:'', active:'בביצוע 🔧', done:'הושלם ✓', cancel:'בוטל' };
+const ROLE_GROUP = { employee:'עובדי חברה', contractor:'קבלנים' };
+const ROLE_ORDER = ['employee','contractor'];
 
 let DATA = null;
+let mode = 'week';        // week | month
+let display = 'table';    // table | list (לשבוע בלבד)
 let weekStart = getWeekStart(new Date());
+let monthDate = new Date(); monthDate.setDate(1);
 
 function getWeekStart(d){ const x=new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate()-x.getDay()); return x; }
 function dateKey(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
@@ -128,67 +221,177 @@ async function loadData(){
   return false;
 }
 
+function setMode(m){
+  mode = m;
+  document.querySelectorAll('#modeSeg button').forEach(b=>b.classList.toggle('on', b.dataset.v===m));
+  document.getElementById('dispSeg').style.display = m==='week' ? 'flex' : 'none';
+  render();
+}
+function setDisplay(d){
+  display = d;
+  document.querySelectorAll('#dispSeg button').forEach(b=>b.classList.toggle('on', b.dataset.v===d));
+  render();
+}
+function nav(n){
+  if(mode==='week'){ weekStart.setDate(weekStart.getDate()+n*7); }
+  else { monthDate.setMonth(monthDate.getMonth()+n); }
+  render();
+}
+function goToday(){
+  weekStart = getWeekStart(new Date());
+  monthDate = new Date(); monthDate.setDate(1);
+  render();
+}
+
 function renderWorkerFilter(){
   const sel = document.getElementById('workerFilter');
   const cur = sel.value;
-  const ws = [...(DATA.workers||[])].sort((a,b)=>a.role===b.role?0:(a.role==='employee'?-1:1));
+  const ws = ROLE_ORDER.flatMap(r=>(DATA.workers||[]).filter(w=>w.role===r));
   sel.innerHTML = '<option value="">👥 כל העובדים</option>' +
     ws.map(w=>`<option value="${w.id}">${esc(w.name)}</option>`).join('');
   if([...sel.options].some(o=>o.value===cur)) sel.value = cur;
 }
 
+function jobsFor(dk, filterW){
+  let arr = ((DATA.jobs||{})[dk]||[]).slice();
+  if(filterW) arr = arr.filter(j=>j.workerId===filterW);
+  return arr.sort(jobSort);
+}
+
 function render(){
   if(!DATA) return;
-  const ds = weekDates();
-  const last = ds[ds.length-1];
-  document.getElementById('weekLabel').textContent = fmtDay(ds[0]) + ' – ' + fmtDay(last) + '.' + last.getFullYear();
   if(DATA.updatedAt){
     const u = new Date(DATA.updatedAt);
-    document.getElementById('updatedAt').textContent = 'עודכן לאחרונה: ' + u.toLocaleString('he-IL', {day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'});
+    document.getElementById('updatedAt').textContent = 'עודכן לאחרונה: ' + u.toLocaleString('he-IL',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'});
   }
   const filterW = document.getElementById('workerFilter').value;
+  if(mode==='week'){
+    const ds = weekDates(); const last = ds[ds.length-1];
+    document.getElementById('rangeLabel').textContent = fmtDay(ds[0]) + ' – ' + fmtDay(last) + '.' + last.getFullYear();
+    document.getElementById('content').innerHTML =
+      display==='table' ? renderWeekTable(filterW) : renderWeekList(filterW);
+  } else {
+    document.getElementById('rangeLabel').textContent = MONTH_NAMES[monthDate.getMonth()] + ' ' + monthDate.getFullYear();
+    document.getElementById('content').innerHTML = renderMonth(filterW);
+  }
+}
+
+/* ===== שבוע — טבלה ===== */
+function renderWeekTable(filterW){
+  const ds = weekDates();
   const todayKey = dateKey(new Date());
   const workerById = {}; (DATA.workers||[]).forEach(w=>workerById[w.id]=w);
+  let workersToShow = ROLE_ORDER.flatMap(r=>(DATA.workers||[]).filter(w=>w.role===r));
+  if(filterW) workersToShow = workersToShow.filter(w=>w.id===filterW);
 
-  let html = '', totalShown = 0;
+  let html = '<div class="table-wrap"><table class="sched"><thead><tr><th class="worker-col">עובד</th>';
+  ds.forEach(d=>{
+    const isToday = dateKey(d)===todayKey;
+    html += `<th class="${isToday?'today-col':''}">${DAY_NAMES[d.getDay()]}<span class="dnum">${fmtDay(d)}${isToday?' • היום':''}</span></th>`;
+  });
+  html += '</tr></thead><tbody>';
+
+  let lastRole = null;
+  workersToShow.forEach(w=>{
+    if(!filterW && w.role!==lastRole){
+      html += `<tr class="group-row"><td colspan="7">${ROLE_GROUP[w.role]}</td></tr>`;
+      lastRole = w.role;
+    }
+    html += `<tr><td class="worker-cell">
+      <div class="worker-name">${esc(w.name)}</div>
+      <span class="worker-role role-${w.role}">${w.title?esc(w.title):(w.role==='contractor'?'קבלן':'עובד חברה')}</span>
+    </td>`;
+    ds.forEach(d=>{
+      const dk = dateKey(d);
+      const isToday = dk===todayKey;
+      const dayJobs = jobsFor(dk, null).filter(j=>j.workerId===w.id);
+      html += `<td class="${isToday?'today-col':''}">`;
+      dayJobs.forEach(j=>{
+        const timeStr = j.start ? (j.start + (j.end?'–'+j.end:'')) : '';
+        html += `<div class="job st-${j.status||'planned'}">
+          ${timeStr?`<span class="jt">${timeStr}</span> `:''}
+          <b>${esc(j.site)}</b>
+          ${j.location?`<span class="loc">${esc(j.location)}</span>`:''}
+        </div>`;
+      });
+      html += '</td>';
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+
+/* ===== שבוע — רשימה ===== */
+function renderWeekList(filterW){
+  const ds = weekDates();
+  const todayKey = dateKey(new Date());
+  const workerById = {}; (DATA.workers||[]).forEach(w=>workerById[w.id]=w);
+  let html = '';
   ds.forEach(d=>{
     const dk = dateKey(d);
-    let dayJobs = ((DATA.jobs||{})[dk]||[]).slice();
-    if(filterW) dayJobs = dayJobs.filter(j=>j.workerId===filterW);
-    dayJobs.sort(jobSort);
+    const dayJobs = jobsFor(dk, filterW);
     const isToday = dk===todayKey;
     html += `<div class="day-block">
       <div class="day-head ${isToday?'today':''}">
         <span>יום ${DAY_NAMES[d.getDay()]} ${fmtDay(d)}${isToday?' • היום':''}</span>
         <span class="cnt">${dayJobs.length ? dayJobs.length + ' עבודות' : ''}</span>
       </div>`;
-    if(dayJobs.length===0){
-      html += '<div class="empty-day">— אין שיבוצים —</div>';
-    } else {
-      dayJobs.forEach(j=>{
-        const w = workerById[j.workerId];
-        const timeStr = j.start ? (j.start + (j.end?'–'+j.end:'')) : '';
-        html += `<div class="jcard st-${j.status||'planned'}">
-          <div class="jrow1">
-            ${timeStr?`<span class="jtime">${timeStr}</span>`:''}
-            <span class="jsite">${esc(j.site)}</span>
-            ${j.type?`<span class="jtag">${esc(j.type)}</span>`:''}
-          </div>
-          ${j.location?`<div class="jloc">📍 ${esc(j.location)}</div>`:''}
-          ${j.notes?`<div class="jnotes">${esc(j.notes)}</div>`:''}
-          ${w?`<span class="jworker ${w.role}">${esc(w.name)}</span>`:''}
-          ${STATUS_NAMES[j.status]?`<span class="jstatus">${STATUS_NAMES[j.status]}</span>`:''}
-        </div>`;
-        totalShown++;
-      });
-    }
+    if(dayJobs.length===0){ html += '<div class="empty-day">— אין שיבוצים —</div>'; }
+    else dayJobs.forEach(j=>{
+      const w = workerById[j.workerId];
+      const timeStr = j.start ? (j.start + (j.end?'–'+j.end:'')) : '';
+      html += `<div class="jcard st-${j.status||'planned'}">
+        <div class="jrow1">
+          ${timeStr?`<span class="jtime">${timeStr}</span>`:''}
+          <span class="jsite">${esc(j.site)}</span>
+          ${j.type?`<span class="jtag">${esc(j.type)}</span>`:''}
+        </div>
+        ${j.location?`<div class="jloc">📍 ${esc(j.location)}</div>`:''}
+        ${j.notes?`<div class="jnotes">${esc(j.notes)}</div>`:''}
+        ${w?`<span class="jworker ${w.role}">${esc(w.name)}</span>`:''}
+        ${STATUS_NAMES[j.status]?`<span class="jstatus">${STATUS_NAMES[j.status]}</span>`:''}
+      </div>`;
+    });
     html += '</div>';
   });
-  document.getElementById('content').innerHTML = html;
+  return html;
 }
 
-function shiftWeek(n){ weekStart.setDate(weekStart.getDate()+n*7); render(); }
-function goToday(){ weekStart = getWeekStart(new Date()); render(); }
+/* ===== חודש — לוח שנה ===== */
+function renderMonth(filterW){
+  const y = monthDate.getFullYear(), m = monthDate.getMonth();
+  const first = new Date(y, m, 1);
+  const gridStart = getWeekStart(first);
+  const todayKey = dateKey(new Date());
+  const workerById = {}; (DATA.workers||[]).forEach(w=>workerById[w.id]=w);
+  const MAX_SHOWN = 3;
+
+  let html = '<div class="month-grid">';
+  DAY_SHORT.forEach(n=>html += `<div class="mh">${n}</div>`);
+  const cur = new Date(gridStart);
+  for(let i=0;i<42;i++){
+    const inMonth = cur.getMonth()===m;
+    const dk = dateKey(cur);
+    const isToday = dk===todayKey;
+    const dayJobs = inMonth ? jobsFor(dk, filterW) : [];
+    html += `<div class="mday ${inMonth?'':'out'} ${isToday?'today':''}">
+      <div class="dn">${cur.getDate()}</div>`;
+    dayJobs.slice(0,MAX_SHOWN).forEach(j=>{
+      const w = workerById[j.workerId];
+      html += `<div class="mjob st-${j.status||'planned'}">
+        ${j.start?`${j.start} `:''}<b>${esc(j.site)}</b>${(!filterW && w)?`<span class="mw"> · ${esc(w.name)}</span>`:''}
+      </div>`;
+    });
+    if(dayJobs.length>MAX_SHOWN) html += `<div class="more">+${dayJobs.length-MAX_SHOWN} נוספות</div>`;
+    html += '</div>';
+    cur.setDate(cur.getDate()+1);
+    // עצירה אחרי השבוע שמכיל את סוף החודש
+    if(i%7===6 && cur.getMonth()!==m && cur > first) break;
+  }
+  html += '</div>';
+  return html;
+}
 
 (async function init(){
   const ok = await loadData();
@@ -198,7 +401,6 @@ function goToday(){ weekStart = getWeekStart(new Date()); render(); }
   }
   renderWorkerFilter();
   render();
-  // רענון אוטומטי כל דקה
   setInterval(async ()=>{
     const before = DATA && DATA.updatedAt;
     if(await loadData() && DATA.updatedAt !== before){ renderWorkerFilter(); render(); }
