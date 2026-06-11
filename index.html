@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VAS Security — לוז שבועי</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700&family=Frank+Ruhl+Libre:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F6F3EC;
+    --surface:#FFFFFF;
+    --ink:#1D1B16;
+    --ink-soft:#6B6557;
+    --gold:#B8860B;
+    --gold-soft:#F3E7C9;
+    --line:#E5DFD2;
+    --emp:#1F6F78;        /* עובד שכיר */
+    --emp-bg:#E3F0F1;
+    --contractor:#B3552B; /* קבלן */
+    --contractor-bg:#F7E6DC;
+    --done:#2E7D46;
+    --done-bg:#E2F2E7;
+    --cancel:#A33A3A;
+    --wa:#1FA855;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Heebo',system-ui,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    min-height:100vh;
+  }
+  header{
+    background:var(--ink);
+    color:#F6F3EC;
+    padding:14px 22px;
+    display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+    border-bottom:3px solid var(--gold);
+  }
+  .brand h1{
+    font-family:'Frank Ruhl Libre',serif;
+    font-weight:900;font-size:1.35rem;letter-spacing:.5px;
+  }
+  .brand small{color:var(--gold);font-size:.72rem;letter-spacing:2px}
+  .today-chip{
+    background:rgba(255,255,255,.08);border:1px solid rgba(212,160,23,.5);
+    border-radius:8px;padding:5px 12px;font-size:.78rem;color:#EFE8D6;
+  }
+  .week-nav{display:flex;align-items:center;gap:8px;margin-inline-start:auto;flex-wrap:wrap}
+  .week-label{
+    font-weight:600;font-size:.95rem;min-width:190px;text-align:center;
+    background:rgba(255,255,255,.07);padding:6px 14px;border-radius:8px;
+  }
+  button{
+    font-family:inherit;cursor:pointer;border:none;border-radius:8px;
+    font-size:.88rem;font-weight:600;padding:8px 14px;transition:.15s;
+  }
+  .btn-ghost{background:rgba(255,255,255,.1);color:#F6F3EC}
+  .btn-ghost:hover{background:rgba(255,255,255,.22)}
+  .btn-gold{background:var(--gold);color:#fff}
+  .btn-gold:hover{background:#9a7009}
+  .btn-light{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+  .btn-light:hover{border-color:var(--gold);color:var(--gold)}
+  .btn-danger{background:#fff;color:var(--cancel);border:1px solid #E5C9C9}
+  .btn-danger:hover{background:#FDF1F1}
+
+  .toolbar{
+    display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+    padding:14px 22px;
+  }
+  .toolbar select{
+    padding:8px 12px;border:1px solid var(--line);border-radius:8px;
+    font-family:inherit;font-size:.85rem;background:var(--surface);
+  }
+  .stats{display:flex;gap:10px;margin-inline-start:auto;flex-wrap:wrap}
+  .stat{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:7px 14px;font-size:.82rem;display:flex;gap:8px;align-items:baseline;
+  }
+  .stat b{font-size:1.1rem;color:var(--gold)}
+
+  /* ===== GRID ===== */
+  .grid-wrap{padding:0 22px 30px;overflow-x:auto}
+  table.sched{
+    border-collapse:separate;border-spacing:0;width:100%;min-width:1020px;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    overflow:hidden;
+  }
+  .sched th{
+    background:var(--ink);color:#F6F3EC;padding:10px 8px;font-size:.85rem;font-weight:600;
+    border-inline-start:1px solid rgba(255,255,255,.08);
+  }
+  .sched th .dnum{display:block;color:var(--gold);font-size:.75rem;font-weight:500;margin-top:2px}
+  .sched th.today-col{background:#4A4128}
+  .sched th.today-col .dnum::after{content:' • היום';color:#F0D78C}
+  .sched th.worker-col{width:165px;text-align:right;padding-inline-start:14px}
+  .sched td{
+    border-top:1px solid var(--line);border-inline-start:1px solid var(--line);
+    vertical-align:top;padding:5px;min-height:64px;height:64px;
+  }
+  td.day-cell{cursor:pointer;position:relative;transition:.12s}
+  td.day-cell:hover{background:#FBF8F0}
+  td.day-cell.today-col{background:#FDFAF1}
+  td.day-cell .add-hint{
+    position:absolute;inset-inline-end:6px;top:4px;color:#C9C2B0;font-size:1rem;
+    opacity:0;transition:.12s;
+  }
+  td.day-cell:hover .add-hint{opacity:1}
+  .worker-cell{padding:8px 10px !important;background:#FCFAF5}
+  .worker-top{display:flex;align-items:center;gap:6px}
+  .worker-name{font-weight:700;font-size:.9rem;flex:1}
+  .wa-btn{
+    background:none;border:none;padding:2px;font-size:.95rem;line-height:1;cursor:pointer;
+    filter:grayscale(1);opacity:.45;transition:.15s;
+  }
+  .wa-btn:hover{filter:none;opacity:1}
+  .worker-role{font-size:.7rem;font-weight:600;padding:2px 8px;border-radius:20px;display:inline-block;margin-top:3px}
+  .role-employee{background:var(--emp-bg);color:var(--emp)}
+  .role-contractor{background:var(--contractor-bg);color:var(--contractor)}
+  .worker-title{font-size:.7rem;color:var(--ink-soft);margin-top:2px}
+  tr.group-row td{
+    background:var(--gold-soft);font-family:'Frank Ruhl Libre',serif;font-weight:900;
+    font-size:.95rem;padding:6px 14px;color:#6E5510;border-top:1px solid var(--line);
+  }
+  .job{
+    border-radius:7px;padding:5px 8px;margin-bottom:4px;font-size:.76rem;line-height:1.35;
+    border:1px solid transparent;cursor:pointer;position:relative;
+  }
+  .job:hover{filter:brightness(.96)}
+  .job .jtime{font-weight:700;font-size:.72rem;letter-spacing:.3px}
+  .job b{display:block;font-size:.79rem}
+  .job .loc{opacity:.75}
+  .job .conflict{
+    position:absolute;top:3px;inset-inline-start:5px;font-size:.75rem;
+  }
+  .job.st-planned{background:#F3F1EA;border-color:#DCD6C5;color:#55503F}
+  .job.st-active{background:var(--gold-soft);border-color:#E0C98A;color:#6E5510}
+  .job.st-done{background:var(--done-bg);border-color:#BCDFC7;color:var(--done)}
+  .job.st-cancel{background:#F8ECEC;border-color:#E5C9C9;color:var(--cancel);text-decoration:line-through;opacity:.7}
+  .job.dimmed{opacity:.25}
+  .jtag{
+    display:inline-block;font-size:.62rem;font-weight:700;letter-spacing:.3px;
+    border:1px solid currentColor;border-radius:20px;padding:0 6px;margin-top:2px;opacity:.85;
+  }
+
+  .empty-state{text-align:center;padding:60px 20px;color:var(--ink-soft)}
+  .empty-state h2{font-family:'Frank Ruhl Libre',serif;margin-bottom:8px;color:var(--ink)}
+
+  /* ===== MODALS ===== */
+  .overlay{
+    position:fixed;inset:0;background:rgba(20,18,12,.55);display:none;
+    align-items:flex-start;justify-content:center;padding:40px 16px;z-index:50;overflow-y:auto;
+  }
+  .overlay.open{display:flex}
+  .modal{
+    background:var(--surface);border-radius:14px;width:100%;max-width:490px;
+    padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.25);
+    border-top:4px solid var(--gold);
+  }
+  .modal h2{font-family:'Frank Ruhl Libre',serif;font-size:1.2rem;margin-bottom:16px}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:.8rem;font-weight:600;color:var(--ink-soft);margin-bottom:4px}
+  .field input,.field select,.field textarea{
+    width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;
+    font-family:inherit;font-size:.9rem;background:#FDFCF9;
+  }
+  .field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--gold);border-color:transparent}
+  .field-row{display:flex;gap:10px}
+  .field-row .field{flex:1}
+  .modal-actions{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}
+  .modal-actions .spacer{flex:1}
+
+  .wlist{max-height:280px;overflow-y:auto;margin-bottom:14px}
+  .wrow{
+    display:flex;align-items:center;gap:10px;padding:8px 10px;
+    border:1px solid var(--line);border-radius:8px;margin-bottom:6px;background:#FDFCF9;
+  }
+  .wrow .winfo{flex:1}
+  .wrow .winfo b{font-size:.9rem}
+  .wrow .winfo span{font-size:.72rem;display:block;color:var(--ink-soft)}
+  .icon-btn{background:none;border:none;font-size:1rem;padding:4px 6px;color:var(--ink-soft)}
+  .icon-btn:hover{color:var(--cancel)}
+  .icon-btn.edit:hover{color:var(--gold)}
+
+  .toast{
+    position:fixed;bottom:20px;inset-inline-start:50%;transform:translateX(50%);
+    background:var(--ink);color:#F6F3EC;padding:10px 22px;border-radius:30px;
+    font-size:.85rem;opacity:0;pointer-events:none;transition:.3s;z-index:99;
+    border:1px solid var(--gold);max-width:90vw;text-align:center;
+  }
+  .toast.show{opacity:1}
+
+  @media print{
+    header .week-nav button, .toolbar, .add-hint, .wa-btn{display:none !important}
+    body{background:#fff}
+    .grid-wrap{padding:0;overflow:visible}
+    table.sched{min-width:0;font-size:.7rem}
+    header{padding:8px 12px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .job,.worker-role,tr.group-row td{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+  @media (max-width:640px){
+    .week-label{min-width:0;font-size:.8rem}
+    header{padding:10px 14px;gap:10px}
+    .toolbar{padding:10px 14px}
+    .grid-wrap{padding:0 10px 20px}
+    .today-chip{display:none}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <h1>VAS SECURITY</h1>
+    <small>לוז שבועי — צוותים ופרויקטים</small>
+  </div>
+  <div class="today-chip" id="todayChip"></div>
+  <div class="week-nav">
+    <button class="btn-ghost" onclick="shiftWeek(1)">◀ הבא</button>
+    <div class="week-label" id="weekLabel"></div>
+    <button class="btn-ghost" onclick="shiftWeek(-1)">הקודם ▶</button>
+    <button class="btn-gold" onclick="goToday()">היום</button>
+  </div>
+</header>
+
+<div class="toolbar">
+  <button class="btn-light" onclick="openWorkersModal()">👥 עובדים</button>
+  <button class="btn-light" onclick="openSitesModal()">📍 אתרים</button>
+  <button class="btn-light" onclick="openTypesModal()">🏷️ סוגי עבודה</button>
+  <select id="siteFilter" onchange="render()" title="סינון לפי אתר"></select>
+  <select id="typeFilter" onchange="render()" title="סינון לפי סוג עבודה"></select>
+  <button class="btn-light" onclick="window.print()">🖨️ הדפסה</button>
+  <button class="btn-light" onclick="exportData()">⬇️ גיבוי</button>
+  <button class="btn-light" onclick="document.getElementById('importFile').click()">⬆️ שחזור</button>
+  <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+  <div class="stats" id="statsBar"></div>
+</div>
+
+<div class="grid-wrap" id="gridWrap"></div>
+
+<!-- Job modal -->
+<div class="overlay" id="jobOverlay">
+  <div class="modal">
+    <h2 id="jobModalTitle">עבודה חדשה</h2>
+    <div class="field">
+      <label>אתר / פרויקט *</label>
+      <select id="jobSite" onchange="onSiteSelect()"></select>
+      <input id="jobSiteNew" placeholder="שם אתר חדש..." style="display:none;margin-top:6px">
+    </div>
+    <div class="field">
+      <label>סוג עבודה</label>
+      <select id="jobType" onchange="onTypeSelect()"></select>
+      <input id="jobTypeNew" placeholder="סוג עבודה חדש..." style="display:none;margin-top:6px">
+    </div>
+    <div class="field">
+      <label>מיקום מדויק (סניף / קומה / כתובת)</label>
+      <input id="jobLocation" placeholder="לדוגמה: קומה 12, סניף חולון...">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>שעת התחלה</label>
+        <input type="time" id="jobStart">
+      </div>
+      <div class="field">
+        <label>שעת סיום</label>
+        <input type="time" id="jobEnd">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>עובד</label>
+        <select id="jobWorker"></select>
+      </div>
+      <div class="field">
+        <label>יום</label>
+        <select id="jobDay"></select>
+      </div>
+    </div>
+    <div class="field">
+      <label>סטטוס</label>
+      <select id="jobStatus">
+        <option value="planned">מתוכנן</option>
+        <option value="active">בביצוע</option>
+        <option value="done">הושלם</option>
+        <option value="cancel">בוטל</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>הערות</label>
+      <textarea id="jobNotes" rows="2" placeholder="ציוד נדרש, איש קשר, פרטים..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-gold" onclick="saveJob()">שמירה</button>
+      <button class="btn-light" onclick="closeJobModal()">ביטול</button>
+      <div class="spacer"></div>
+      <button class="btn-light" id="dupJobBtn" style="display:none" onclick="duplicateJob()">שכפול</button>
+      <button class="btn-danger" id="delJobBtn" style="display:none" onclick="deleteJob()">מחיקה</button>
+    </div>
+  </div>
+</div>
+
+<!-- Workers modal -->
+<div class="overlay" id="workersOverlay">
+  <div class="modal">
+    <h2>ניהול עובדים וקבלנים</h2>
+    <div class="wlist" id="workersList"></div>
+    <div style="border-top:1px solid var(--line);padding-top:14px">
+      <div class="field-row">
+        <div class="field"><label>שם *</label><input id="wName" placeholder="שם"></div>
+        <div class="field"><label>סוג</label>
+          <select id="wRole">
+            <option value="employee">עובד שכיר</option>
+            <option value="contractor">קבלן</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>תפקיד (לא חובה)</label><input id="wTitle" placeholder="טכנאי / מנהל פרויקטים / מנהלת משרד..."></div>
+        <div class="field"><label>טלפון (לוואטסאפ)</label><input id="wPhone" placeholder="050-0000000"></div>
+      </div>
+      <input type="hidden" id="wEditId">
+      <div class="modal-actions">
+        <button class="btn-gold" id="wSaveBtn" onclick="saveWorker()">הוספה</button>
+        <button class="btn-light" onclick="closeWorkersModal()">סגירה</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Sites modal -->
+<div class="overlay" id="sitesOverlay">
+  <div class="modal">
+    <h2>ניהול אתרים</h2>
+    <div class="wlist" id="sitesList"></div>
+    <div style="border-top:1px solid var(--line);padding-top:14px">
+      <div class="field"><label>אתר חדש</label><input id="siteName" placeholder="שם האתר / הפרויקט"></div>
+      <div class="modal-actions">
+        <button class="btn-gold" onclick="addSite()">הוספת אתר</button>
+        <button class="btn-light" onclick="closeSitesModal()">סגירה</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Types modal -->
+<div class="overlay" id="typesOverlay">
+  <div class="modal">
+    <h2>ניהול סוגי עבודה</h2>
+    <div class="wlist" id="typesList"></div>
+    <div style="border-top:1px solid var(--line);padding-top:14px">
+      <div class="field"><label>סוג עבודה חדש</label><input id="typeName" placeholder="לדוגמה: גילוי אש, ביטחון, תקשורת..."></div>
+      <div class="modal-actions">
+        <button class="btn-gold" onclick="addType()">הוספת סוג</button>
+        <button class="btn-light" onclick="closeTypesModal()">סגירה</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ====== constants & state ====== */
+const KEYS = { meta:'vas-schedule:meta', workers:'vas-schedule:workers', jobs:'vas-schedule:jobs', sites:'vas-schedule:sites', types:'vas-schedule:types' };
+const VERSION = 3;
+const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי'];
+const ROLE_NAMES = { employee:'שכיר', contractor:'קבלן' };
+const ROLE_ORDER = ['employee','contractor'];
+const ROLE_GROUP = { employee:'עובדים שכירים', contractor:'קבלנים' };
+const STATUS_NAMES = { planned:'מתוכנן', active:'בביצוע', done:'הושלם', cancel:'בוטל' };
+
+let workers = [];
+let jobs = {};          // { 'YYYY-MM-DD': [ {id, workerId, site, location, start, end, notes, status} ] }
+let sites = [];
+let types = [];
+let weekStart = getWeekStart(new Date());   // נלקח אוטומטית מתאריך המכשיר
+let editingJob = null;
+let memFallback = false;
+
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+
+const DEFAULT_EMPLOYEES = [
+  {name:'ז\'נט', title:''},
+  {name:'ליאל', title:'מנהל פרויקטים'},
+  {name:'תרשיש', title:''},
+  {name:'איגור', title:''},
+  {name:'ליאור', title:''},
+  {name:'רפאל', title:''},
+  {name:'הילה', title:'מנהלת משרד'},
+];
+const DEFAULT_CONTRACTORS = ['אנדריי','דביר','דולב','בריס','עוזי','מתן'];
+const DEFAULT_SITES = ['הקפיטל ירושלים','יובלים נס ציונה','מקס סטוק','חיריה'];
+const DEFAULT_TYPES = ['גילוי אש','ביטחון','תקשורת','בקרת כניסה','אינטרקום','שירות / תקלה'];
+
+/* ====== dates ====== */
+function getWeekStart(d){
+  const x = new Date(d); x.setHours(0,0,0,0);
+  x.setDate(x.getDate() - x.getDay()); // ראשון
+  return x;
+}
+function dateKey(d){
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function fmtDay(d){ return d.getDate() + '.' + (d.getMonth()+1); }
+function weekDates(){
+  return Array.from({length:6},(_,i)=>{ const d=new Date(weekStart); d.setDate(d.getDate()+i); return d; });
+}
+
+/* ====== storage ======
+   בתוך Claude: window.storage (ענן). מחוץ לקלוד (GitHub Pages / קובץ מקומי): localStorage של הדפדפן. */
+const hasCloud = typeof window.storage !== 'undefined';
+async function sGet(key){
+  if(hasCloud){
+    try{ const r = await window.storage.get(key); return r ? JSON.parse(r.value) : null; }
+    catch(e){ return null; }
+  }
+  try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; }
+  catch(e){ return null; }
+}
+async function sSet(key,val){
+  if(hasCloud){
+    try{ await window.storage.set(key, JSON.stringify(val)); }
+    catch(e){ memFallback = true; }
+    return;
+  }
+  try{ localStorage.setItem(key, JSON.stringify(val)); }
+  catch(e){ memFallback = true; }
+}
+async function persistWorkers(){ await sSet(KEYS.workers, workers); }
+async function persistJobs(){ await sSet(KEYS.jobs, jobs); }
+async function persistSites(){ await sSet(KEYS.sites, sites); }
+async function persistTypes(){ await sSet(KEYS.types, types); }
+
+function buildDefaultWorkers(){
+  const arr = [];
+  DEFAULT_EMPLOYEES.forEach(e=>arr.push({id:uid(), name:e.name, role:'employee', title:e.title, phone:''}));
+  DEFAULT_CONTRACTORS.forEach(n=>arr.push({id:uid(), name:n, role:'contractor', title:'', phone:''}));
+  return arr;
+}
+
+async function loadAll(){
+  const meta = await sGet(KEYS.meta);
+  if(!meta){
+    workers = buildDefaultWorkers(); sites = [...DEFAULT_SITES]; types = [...DEFAULT_TYPES]; jobs = {};
+    await sSet(KEYS.meta, {version:VERSION, createdAt:new Date().toISOString()});
+    await persistWorkers(); await persistJobs(); await persistSites(); await persistTypes();
+    return;
+  }
+  workers = (await sGet(KEYS.workers)) || [];
+  jobs = (await sGet(KEYS.jobs)) || {};
+  sites = (await sGet(KEYS.sites)) || [];
+  types = (await sGet(KEYS.types)) || [];
+
+  if((meta.version||1) < VERSION){
+    if((meta.version||1) < 2){
+      // מיגרציה מגרסה 1: תפקידים ישנים -> שכיר/קבלן + תפקיד
+      workers.forEach(w=>{
+        if(w.role==='tech'){ w.role='employee'; w.title = w.title || 'טכנאי'; }
+        else if(w.role==='pm'){ w.role='employee'; w.title = w.title || 'מנהל פרויקטים'; }
+        else if(w.role!=='employee' && w.role!=='contractor'){ w.role='contractor'; }
+        if(w.title===undefined) w.title='';
+      });
+      // הוספת העובדים הקבועים שחסרים לפי שם
+      const names = new Set(workers.map(w=>w.name.trim()));
+      DEFAULT_EMPLOYEES.forEach(e=>{ if(!names.has(e.name)) workers.push({id:uid(), name:e.name, role:'employee', title:e.title, phone:''}); });
+      DEFAULT_CONTRACTORS.forEach(n=>{ if(!names.has(n)) workers.push({id:uid(), name:n, role:'contractor', title:'', phone:''}); });
+      if(sites.length===0) sites = [...DEFAULT_SITES];
+      Object.values(jobs).forEach(arr=>arr.forEach(j=>{
+        if(j.site===undefined){ j.site = j.project || ''; delete j.project; }
+        if(j.start===undefined) j.start='';
+        if(j.end===undefined) j.end='';
+      }));
+    }
+    // מיגרציה לגרסה 3: שדה סוג עבודה
+    Object.values(jobs).forEach(arr=>arr.forEach(j=>{ if(j.type===undefined) j.type=''; }));
+    if(types.length===0) types = [...DEFAULT_TYPES];
+    await persistWorkers(); await persistJobs(); await persistSites(); await persistTypes();
+    await sSet(KEYS.meta, {...meta, version:VERSION, migratedAt:new Date().toISOString()});
+  }
+  if(sites.length===0){ sites=[...DEFAULT_SITES]; await persistSites(); }
+  if(types.length===0){ types=[...DEFAULT_TYPES]; await persistTypes(); }
+}
+
+/* ====== render ====== */
+function render(){
+  renderTodayChip();
+  renderWeekLabel();
+  renderSiteFilter();
+  renderTypeFilter();
+  renderGrid();
+  renderStats();
+}
+function renderTodayChip(){
+  const now = new Date();
+  const dayName = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'][now.getDay()];
+  document.getElementById('todayChip').textContent =
+    'היום: יום ' + dayName + ', ' + now.getDate()+'.'+(now.getMonth()+1)+'.'+now.getFullYear();
+}
+function renderWeekLabel(){
+  const ds = weekDates();
+  const last = ds[ds.length-1];
+  document.getElementById('weekLabel').textContent =
+    'שבוע ' + fmtDay(ds[0]) + ' – ' + fmtDay(last) + '.' + last.getFullYear();
+}
+function renderSiteFilter(){
+  const sel = document.getElementById('siteFilter');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">כל האתרים</option>' +
+    sites.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
+  if([...sel.options].some(o=>o.value===cur)) sel.value = cur;
+}
+function renderTypeFilter(){
+  const sel = document.getElementById('typeFilter');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">כל סוגי העבודה</option>' +
+    types.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join('');
+  if([...sel.options].some(o=>o.value===cur)) sel.value = cur;
+}
+function jobSort(a,b){ return (a.start||'99:99').localeCompare(b.start||'99:99'); }
+function overlaps(a,b){
+  if(!a.start || !a.end || !b.start || !b.end) return false;
+  return a.start < b.end && b.start < a.end;
+}
+function renderGrid(){
+  const wrap = document.getElementById('gridWrap');
+  if(workers.length === 0){
+    wrap.innerHTML = `<div class="empty-state">
+      <h2>עדיין אין עובדים בלוז</h2>
+      <p>מתחילים בהוספת עובדים שכירים וקבלנים</p><br>
+      <button class="btn-gold" onclick="openWorkersModal()">👥 הוספת עובדים</button>
+    </div>`;
+    return;
+  }
+  const ds = weekDates();
+  const todayKey = dateKey(new Date());
+  const filterSite = document.getElementById('siteFilter').value;
+  const filterType = document.getElementById('typeFilter').value;
+
+  let html = '<table class="sched"><thead><tr><th class="worker-col">עובד</th>';
+  ds.forEach(d=>{
+    const isToday = dateKey(d)===todayKey;
+    html += `<th class="${isToday?'today-col':''}">${DAY_NAMES[d.getDay()]}<span class="dnum">${fmtDay(d)}</span></th>`;
+  });
+  html += '</tr></thead><tbody>';
+
+  ROLE_ORDER.forEach(role=>{
+    const group = workers.filter(w=>w.role===role);
+    if(group.length===0) return;
+    html += `<tr class="group-row"><td colspan="7">${ROLE_GROUP[role]} (${group.length})</td></tr>`;
+    group.forEach(w=>{
+      html += `<tr><td class="worker-cell">
+        <div class="worker-top">
+          <div class="worker-name">${esc(w.name)}</div>
+          ${w.phone?`<button class="wa-btn" title="שליחת הלוז השבועי בוואטסאפ" onclick="sendWeekWA('${w.id}')">💬</button>`:''}
+        </div>
+        <span class="worker-role role-${role}">${ROLE_NAMES[role]}</span>
+        ${w.title?`<div class="worker-title">${esc(w.title)}</div>`:''}
+      </td>`;
+      ds.forEach(d=>{
+        const dk = dateKey(d);
+        const isToday = dk===todayKey;
+        const dayJobs = (jobs[dk]||[]).filter(j=>j.workerId===w.id).sort(jobSort);
+        html += `<td class="day-cell ${isToday?'today-col':''}" onclick="cellClick(event,'${dk}','${w.id}')">
+          <span class="add-hint">＋</span>`;
+        dayJobs.forEach((j,i)=>{
+          const hasConflict = dayJobs.some((o,k)=>k!==i && o.status!=='cancel' && j.status!=='cancel' && overlaps(j,o));
+          const dim = (filterSite && j.site!==filterSite) || (filterType && j.type!==filterType);
+          const timeStr = j.start ? (j.start + (j.end?'–'+j.end:'')) : '';
+          html += `<div class="job st-${j.status}${dim?' dimmed':''}" onclick="event.stopPropagation();openJobModal('${dk}','${j.id}')">
+            ${hasConflict?'<span class="conflict" title="חפיפת שעות">⚠️</span>':''}
+            ${timeStr?`<span class="jtime">${timeStr}</span> `:''}
+            <b>${esc(j.site)}</b>
+            ${j.type?`<span class="jtag">${esc(j.type)}</span>`:''}
+            ${j.location?`<span class="loc">${esc(j.location)}</span>`:''}
+          </div>`;
+        });
+        html += '</td>';
+      });
+      html += '</tr>';
+    });
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+function renderStats(){
+  const ds = weekDates().map(dateKey);
+  const filterSite = document.getElementById('siteFilter').value;
+  const filterType = document.getElementById('typeFilter').value;
+  let total=0, active=0, done=0;
+  ds.forEach(dk=>(jobs[dk]||[]).forEach(j=>{
+    if(j.status==='cancel') return;
+    if(filterSite && j.site!==filterSite) return;
+    if(filterType && j.type!==filterType) return;
+    total++;
+    if(j.status==='active') active++;
+    if(j.status==='done') done++;
+  }));
+  document.getElementById('statsBar').innerHTML = `
+    <div class="stat"><b>${total}</b> עבודות השבוע</div>
+    <div class="stat"><b>${active}</b> בביצוע</div>
+    <div class="stat"><b>${done}</b> הושלמו</div>
+    <div class="stat"><b>${workers.length}</b> עובדים</div>`;
+}
+function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ====== navigation ====== */
+function shiftWeek(n){ weekStart.setDate(weekStart.getDate()+n*7); render(); }
+function goToday(){ weekStart = getWeekStart(new Date()); render(); }
+
+/* ====== job modal ====== */
+function cellClick(e, dk, workerId){ openJobModal(dk, null, workerId); }
+function fillSiteSelect(selected){
+  const sel = document.getElementById('jobSite');
+  sel.innerHTML = sites.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('') +
+    '<option value="__new__">＋ אתר חדש...</option>';
+  if(selected && sites.includes(selected)) sel.value = selected;
+  else if(selected){ // אתר שלא ברשימה (נתון ישן) — מוסיפים זמנית
+    sel.insertAdjacentHTML('afterbegin', `<option value="${esc(selected)}">${esc(selected)}</option>`);
+    sel.value = selected;
+  }
+  onSiteSelect();
+}
+function onSiteSelect(){
+  const isNew = document.getElementById('jobSite').value==='__new__';
+  const inp = document.getElementById('jobSiteNew');
+  inp.style.display = isNew ? 'block' : 'none';
+  if(isNew) setTimeout(()=>inp.focus(),30);
+}
+function fillTypeSelect(selected){
+  const sel = document.getElementById('jobType');
+  sel.innerHTML = '<option value="">— ללא —</option>' +
+    types.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join('') +
+    '<option value="__new__">＋ סוג חדש...</option>';
+  if(selected && types.includes(selected)) sel.value = selected;
+  else if(selected){
+    sel.insertAdjacentHTML('afterbegin', `<option value="${esc(selected)}">${esc(selected)}</option>`);
+    sel.value = selected;
+  }
+  onTypeSelect();
+}
+function onTypeSelect(){
+  const isNew = document.getElementById('jobType').value==='__new__';
+  const inp = document.getElementById('jobTypeNew');
+  inp.style.display = isNew ? 'block' : 'none';
+  if(isNew) setTimeout(()=>inp.focus(),30);
+}
+function openJobModal(dk, jobId, presetWorker){
+  editingJob = jobId ? {dateKey:dk, id:jobId} : null;
+  const wSel = document.getElementById('jobWorker');
+  wSel.innerHTML = ROLE_ORDER.flatMap(r=>workers.filter(w=>w.role===r)).map(w=>
+    `<option value="${w.id}">${esc(w.name)} (${ROLE_NAMES[w.role]}${w.title?' — '+esc(w.title):''})</option>`).join('');
+  const dSel = document.getElementById('jobDay');
+  dSel.innerHTML = weekDates().map(d=>`<option value="${dateKey(d)}">${DAY_NAMES[d.getDay()]} ${fmtDay(d)}</option>`).join('');
+  document.getElementById('jobSiteNew').value='';
+  document.getElementById('jobTypeNew').value='';
+
+  if(jobId){
+    const j = (jobs[dk]||[]).find(x=>x.id===jobId);
+    if(!j) return;
+    document.getElementById('jobModalTitle').textContent = 'עריכת עבודה';
+    fillSiteSelect(j.site);
+    fillTypeSelect(j.type||'');
+    document.getElementById('jobLocation').value = j.location||'';
+    document.getElementById('jobStart').value = j.start||'';
+    document.getElementById('jobEnd').value = j.end||'';
+    document.getElementById('jobNotes').value = j.notes||'';
+    document.getElementById('jobStatus').value = j.status;
+    wSel.value = j.workerId;
+    dSel.value = dk;
+    document.getElementById('delJobBtn').style.display='inline-block';
+    document.getElementById('dupJobBtn').style.display='inline-block';
+  } else {
+    document.getElementById('jobModalTitle').textContent = 'עבודה חדשה';
+    fillSiteSelect(null);
+    fillTypeSelect(null);
+    document.getElementById('jobLocation').value='';
+    document.getElementById('jobStart').value='';
+    document.getElementById('jobEnd').value='';
+    document.getElementById('jobNotes').value='';
+    document.getElementById('jobStatus').value='planned';
+    if(presetWorker) wSel.value = presetWorker;
+    dSel.value = dk;
+    document.getElementById('delJobBtn').style.display='none';
+    document.getElementById('dupJobBtn').style.display='none';
+  }
+  document.getElementById('jobOverlay').classList.add('open');
+}
+function closeJobModal(){ document.getElementById('jobOverlay').classList.remove('open'); editingJob=null; }
+
+async function resolveSite(){
+  let site = document.getElementById('jobSite').value;
+  if(site==='__new__'){
+    site = document.getElementById('jobSiteNew').value.trim();
+    if(!site) return null;
+    if(!sites.includes(site)){ sites.push(site); await persistSites(); }
+  }
+  return site;
+}
+async function resolveType(){
+  let t = document.getElementById('jobType').value;
+  if(t==='__new__'){
+    t = document.getElementById('jobTypeNew').value.trim();
+    if(!t) return '';
+    if(!types.includes(t)){ types.push(t); await persistTypes(); }
+  }
+  return t;
+}
+async function saveJob(){
+  const site = await resolveSite();
+  if(!site){ toast('חסר שם אתר'); return; }
+  const jtype = await resolveType();
+  const data = {
+    site,
+    type: jtype,
+    location: document.getElementById('jobLocation').value.trim(),
+    start: document.getElementById('jobStart').value,
+    end: document.getElementById('jobEnd').value,
+    notes: document.getElementById('jobNotes').value.trim(),
+    status: document.getElementById('jobStatus').value,
+    workerId: document.getElementById('jobWorker').value,
+  };
+  if(data.start && data.end && data.end <= data.start){ toast('שעת הסיום צריכה להיות אחרי ההתחלה'); return; }
+  const newDk = document.getElementById('jobDay').value;
+
+  if(editingJob){
+    const arr = jobs[editingJob.dateKey]||[];
+    const idx = arr.findIndex(j=>j.id===editingJob.id);
+    if(idx>-1){
+      const old = arr[idx];
+      arr.splice(idx,1);
+      if(arr.length===0) delete jobs[editingJob.dateKey];
+      jobs[newDk] = jobs[newDk]||[];
+      jobs[newDk].push({...old, ...data});
+    }
+  } else {
+    jobs[newDk] = jobs[newDk]||[];
+    jobs[newDk].push({id:uid(), ...data});
+  }
+  await persistJobs();
+  closeJobModal(); render(); toast('נשמר ✓');
+}
+async function deleteJob(){
+  if(!editingJob) return;
+  const arr = jobs[editingJob.dateKey]||[];
+  const idx = arr.findIndex(j=>j.id===editingJob.id);
+  if(idx>-1){ arr.splice(idx,1); if(arr.length===0) delete jobs[editingJob.dateKey]; }
+  await persistJobs();
+  closeJobModal(); render(); toast('נמחק');
+}
+async function duplicateJob(){
+  if(!editingJob) return;
+  const j = (jobs[editingJob.dateKey]||[]).find(x=>x.id===editingJob.id);
+  if(!j) return;
+  jobs[editingJob.dateKey].push({...j, id:uid()});
+  await persistJobs();
+  closeJobModal(); render(); toast('שוכפל ✓');
+}
+
+/* ====== WhatsApp ====== */
+function sendWeekWA(workerId){
+  const w = workers.find(x=>x.id===workerId);
+  if(!w || !w.phone){ toast('אין מספר טלפון לעובד הזה'); return; }
+  const digits = w.phone.replace(/\D/g,'');
+  const intl = digits.startsWith('0') ? '972'+digits.slice(1) : digits;
+  const ds = weekDates();
+  let lines = ['לוז שבועי – ' + w.name, ''];
+  let count = 0;
+  ds.forEach(d=>{
+    const dk = dateKey(d);
+    const dayJobs = (jobs[dk]||[]).filter(j=>j.workerId===workerId && j.status!=='cancel').sort(jobSort);
+    if(dayJobs.length===0) return;
+    lines.push('📅 יום ' + DAY_NAMES[d.getDay()] + ' ' + fmtDay(d) + ':');
+    dayJobs.forEach(j=>{
+      const t = j.start ? (j.start + (j.end?'-'+j.end:'') + ' ') : '';
+      lines.push('• ' + t + j.site + (j.type?' ['+j.type+']':'') + (j.location?' – '+j.location:'') + (j.notes?' ('+j.notes+')':''));
+      count++;
+    });
+    lines.push('');
+  });
+  if(count===0){ toast('אין עבודות משובצות לעובד הזה השבוע'); return; }
+  lines.push('בהצלחה! 💪 VAS Security');
+  window.open('https://wa.me/' + intl + '?text=' + encodeURIComponent(lines.join('\n')), '_blank');
+}
+
+/* ====== workers ====== */
+function openWorkersModal(){
+  renderWorkersList();
+  resetWorkerForm();
+  document.getElementById('workersOverlay').classList.add('open');
+}
+function closeWorkersModal(){ document.getElementById('workersOverlay').classList.remove('open'); render(); }
+function renderWorkersList(){
+  const el = document.getElementById('workersList');
+  if(workers.length===0){ el.innerHTML = '<p style="color:var(--ink-soft);font-size:.85rem;text-align:center;padding:14px">אין עובדים עדיין</p>'; return; }
+  el.innerHTML = ROLE_ORDER.flatMap(role=>workers.filter(w=>w.role===role)).map(w=>`
+    <div class="wrow">
+      <span class="worker-role role-${w.role}">${ROLE_NAMES[w.role]}</span>
+      <div class="winfo"><b>${esc(w.name)}</b><span>${esc(w.title||'')}${w.title&&w.phone?' • ':''}${esc(w.phone||'')}</span></div>
+      <button class="icon-btn edit" title="עריכה" onclick="editWorker('${w.id}')">✏️</button>
+      <button class="icon-btn" title="מחיקה" onclick="removeWorker('${w.id}')">🗑️</button>
+    </div>`).join('');
+}
+function resetWorkerForm(){
+  document.getElementById('wName').value='';
+  document.getElementById('wTitle').value='';
+  document.getElementById('wPhone').value='';
+  document.getElementById('wRole').value='employee';
+  document.getElementById('wEditId').value='';
+  document.getElementById('wSaveBtn').textContent='הוספה';
+}
+function editWorker(id){
+  const w = workers.find(x=>x.id===id); if(!w) return;
+  document.getElementById('wName').value=w.name;
+  document.getElementById('wTitle').value=w.title||'';
+  document.getElementById('wPhone').value=w.phone||'';
+  document.getElementById('wRole').value=w.role;
+  document.getElementById('wEditId').value=id;
+  document.getElementById('wSaveBtn').textContent='עדכון';
+}
+async function saveWorker(){
+  const name = document.getElementById('wName').value.trim();
+  if(!name){ toast('חסר שם'); return; }
+  const role = document.getElementById('wRole').value;
+  const title = document.getElementById('wTitle').value.trim();
+  const phone = document.getElementById('wPhone').value.trim();
+  const editId = document.getElementById('wEditId').value;
+  if(editId){
+    const w = workers.find(x=>x.id===editId);
+    if(w){ w.name=name; w.role=role; w.title=title; w.phone=phone; }
+  } else {
+    workers.push({id:uid(), name, role, title, phone});
+  }
+  await persistWorkers();
+  renderWorkersList(); resetWorkerForm(); toast('נשמר ✓');
+}
+async function removeWorker(id){
+  const w = workers.find(x=>x.id===id); if(!w) return;
+  const hasJobs = Object.values(jobs).some(arr=>arr.some(j=>j.workerId===id));
+  if(!confirm(`למחוק את ${w.name}?` + (hasJobs ? '\nכל העבודות המשויכות אליו יימחקו גם.' : ''))) return;
+  workers = workers.filter(x=>x.id!==id);
+  Object.keys(jobs).forEach(dk=>{
+    jobs[dk] = jobs[dk].filter(j=>j.workerId!==id);
+    if(jobs[dk].length===0) delete jobs[dk];
+  });
+  await persistWorkers(); await persistJobs();
+  renderWorkersList(); toast('נמחק');
+}
+
+/* ====== sites ====== */
+function openSitesModal(){
+  renderSitesList();
+  document.getElementById('siteName').value='';
+  document.getElementById('sitesOverlay').classList.add('open');
+}
+function closeSitesModal(){ document.getElementById('sitesOverlay').classList.remove('open'); render(); }
+function renderSitesList(){
+  const el = document.getElementById('sitesList');
+  if(sites.length===0){ el.innerHTML = '<p style="color:var(--ink-soft);font-size:.85rem;text-align:center;padding:14px">אין אתרים עדיין</p>'; return; }
+  el.innerHTML = sites.map((s,i)=>`
+    <div class="wrow">
+      <div class="winfo"><b>📍 ${esc(s)}</b></div>
+      <button class="icon-btn" title="מחיקה" onclick="removeSite(${i})">🗑️</button>
+    </div>`).join('');
+}
+async function addSite(){
+  const name = document.getElementById('siteName').value.trim();
+  if(!name){ toast('חסר שם אתר'); return; }
+  if(sites.includes(name)){ toast('האתר כבר קיים'); return; }
+  sites.push(name);
+  await persistSites();
+  renderSitesList();
+  document.getElementById('siteName').value='';
+  toast('נוסף ✓');
+}
+async function removeSite(i){
+  if(!confirm(`למחוק את האתר "${sites[i]}" מהרשימה?\n(עבודות קיימות לא יימחקו)`)) return;
+  sites.splice(i,1);
+  await persistSites();
+  renderSitesList(); toast('נמחק');
+}
+
+/* ====== work types ====== */
+function openTypesModal(){
+  renderTypesList();
+  document.getElementById('typeName').value='';
+  document.getElementById('typesOverlay').classList.add('open');
+}
+function closeTypesModal(){ document.getElementById('typesOverlay').classList.remove('open'); render(); }
+function renderTypesList(){
+  const el = document.getElementById('typesList');
+  if(types.length===0){ el.innerHTML = '<p style="color:var(--ink-soft);font-size:.85rem;text-align:center;padding:14px">אין סוגי עבודה עדיין</p>'; return; }
+  el.innerHTML = types.map((t,i)=>`
+    <div class="wrow">
+      <div class="winfo"><b>🏷️ ${esc(t)}</b></div>
+      <button class="icon-btn" title="מחיקה" onclick="removeType(${i})">🗑️</button>
+    </div>`).join('');
+}
+async function addType(){
+  const name = document.getElementById('typeName').value.trim();
+  if(!name){ toast('חסר שם'); return; }
+  if(types.includes(name)){ toast('הסוג כבר קיים'); return; }
+  types.push(name);
+  await persistTypes();
+  renderTypesList();
+  document.getElementById('typeName').value='';
+  toast('נוסף ✓');
+}
+async function removeType(i){
+  if(!confirm(`למחוק את סוג העבודה "${types[i]}"?\n(עבודות קיימות לא יימחקו)`)) return;
+  types.splice(i,1);
+  await persistTypes();
+  renderTypesList(); toast('נמחק');
+}
+
+/* ====== backup ====== */
+function exportData(){
+  const blob = new Blob([JSON.stringify({version:VERSION, exportedAt:new Date().toISOString(), workers, jobs, sites, types}, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'vas-schedule-backup-' + dateKey(new Date()) + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('הגיבוי ירד ✓');
+}
+function importData(ev){
+  const file = ev.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try{
+      const data = JSON.parse(reader.result);
+      if(!Array.isArray(data.workers) || typeof data.jobs !== 'object') throw new Error('bad format');
+      if(!confirm('השחזור יחליף את כל הנתונים הקיימים. להמשיך?')) return;
+      workers = data.workers; jobs = data.jobs; sites = data.sites || sites; types = data.types || types;
+      Object.values(jobs).forEach(arr=>arr.forEach(j=>{ if(j.type===undefined) j.type=''; }));
+      await persistWorkers(); await persistJobs(); await persistSites(); await persistTypes();
+      render(); toast('שוחזר בהצלחה ✓');
+    }catch(e){ toast('קובץ לא תקין'); }
+    ev.target.value='';
+  };
+  reader.readAsText(file);
+}
+
+/* ====== misc ====== */
+let toastTimer;
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 2400);
+}
+document.querySelectorAll('.overlay').forEach(ov=>{
+  ov.addEventListener('click', e=>{ if(e.target===ov) ov.classList.remove('open'); });
+});
+document.addEventListener('keydown', e=>{
+  if(e.key==='Escape') document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open'));
+});
+
+/* ====== init ====== */
+(async function init(){
+  await loadAll();
+  render();
+  if(memFallback) toast('שים לב: הנתונים נשמרים רק בסשן הנוכחי');
+})();
+</script>
+</body>
+</html>
