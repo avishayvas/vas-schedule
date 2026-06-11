@@ -189,6 +189,13 @@
   .multi-box label{display:flex;align-items:center;gap:8px;font-size:.86rem;padding:4px 2px;cursor:pointer}
   .multi-box input{width:auto}
   .multi-all{font-size:.74rem;color:var(--gold);background:none;border:none;text-decoration:underline;padding:0;cursor:pointer}
+  .mini-btn{
+    background:#FDFCF9;border:1px solid var(--line);color:var(--ink-soft);
+    font-size:.74rem;font-weight:600;padding:4px 10px;border-radius:7px;
+  }
+  .mini-btn:hover{border-color:var(--gold);color:var(--gold)}
+  .sched th.day-h{cursor:pointer}
+  .sched th.day-h:hover{background:#3A3526}
 
   .wlist{max-height:280px;overflow-y:auto;margin-bottom:14px}
   .wrow{
@@ -296,8 +303,12 @@
         <button type="button" class="mini-link" id="multiToggle" onclick="toggleMultiWorker()">＋ שיבוץ לכמה עובדים בבת אחת</button>
       </div>
       <div class="field">
-        <label>יום</label>
-        <select id="jobDay"></select>
+        <label>תאריך <span id="jobDateName" style="font-weight:400;color:var(--gold)"></span></label>
+        <input type="date" id="jobDate" onchange="updateJobDateName()">
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <button type="button" class="mini-btn" onclick="shiftJobDate(7)">◀ שבוע קדימה</button>
+          <button type="button" class="mini-btn" onclick="shiftJobDate(-7)">שבוע אחורה ▶</button>
+        </div>
       </div>
     </div>
     <div class="field">
@@ -399,6 +410,27 @@
       <button class="btn-light" onclick="closeSyncModal()">סגירה</button>
       <div class="spacer"></div>
       <button class="btn-danger" onclick="clearSyncSettings()">ניתוק</button>
+    </div>
+  </div>
+</div>
+
+<!-- Move day modal -->
+<div class="overlay" id="moveDayOverlay">
+  <div class="modal">
+    <h2>📅 העברת יום שלם</h2>
+    <p id="moveDayInfo" style="font-size:.85rem;color:var(--ink-soft);margin-bottom:14px"></p>
+    <div class="field">
+      <label>לאיזה תאריך להעביר? <span id="moveDayName" style="font-weight:400;color:var(--gold)"></span></label>
+      <input type="date" id="moveDayTarget" onchange="updateMoveDayName()">
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <button type="button" class="mini-btn" onclick="shiftMoveDay(7)">◀ שבוע קדימה</button>
+        <button type="button" class="mini-btn" onclick="shiftMoveDay(1)">◀ יום קדימה</button>
+        <button type="button" class="mini-btn" onclick="shiftMoveDay(-1)">יום אחורה ▶</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-gold" onclick="moveDayDo()">העברה</button>
+      <button class="btn-light" onclick="closeMoveDay()">ביטול</button>
     </div>
   </div>
 </div>
@@ -585,7 +617,7 @@ function renderGrid(){
   let html = '<table class="sched"><thead><tr><th class="worker-col">עובד</th>';
   ds.forEach(d=>{
     const isToday = dateKey(d)===todayKey;
-    html += `<th class="${isToday?'today-col':''}">${DAY_NAMES[d.getDay()]}<span class="dnum">${fmtDay(d)}</span></th>`;
+    html += `<th class="day-h ${isToday?'today-col':''}" onclick="openMoveDay('${dateKey(d)}')" title="לחיצה — העברת כל העבודות של היום לתאריך אחר">${DAY_NAMES[d.getDay()]}<span class="dnum">${fmtDay(d)}</span></th>`;
   });
   html += '</tr></thead><tbody>';
 
@@ -717,13 +749,24 @@ function multiSelectAll(btn){
   boxes.forEach(b=>b.checked = !allChecked);
   btn.textContent = allChecked ? 'סמן את כולם' : 'נקה סימון';
 }
+const FULL_DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+function updateJobDateName(){
+  const v = document.getElementById('jobDate').value;
+  document.getElementById('jobDateName').textContent = v ? '— יום ' + FULL_DAY_NAMES[new Date(v+'T00:00').getDay()] : '';
+}
+function shiftJobDate(n){
+  const inp = document.getElementById('jobDate');
+  if(!inp.value) return;
+  const d = new Date(inp.value+'T00:00');
+  d.setDate(d.getDate()+n);
+  inp.value = dateKey(d);
+  updateJobDateName();
+}
 function openJobModal(dk, jobId, presetWorker){
   editingJob = jobId ? {dateKey:dk, id:jobId} : null;
   const wSel = document.getElementById('jobWorker');
   wSel.innerHTML = ROLE_ORDER.flatMap(r=>workers.filter(w=>w.role===r)).map(w=>
     `<option value="${w.id}">${esc(w.name)} (${ROLE_NAMES[w.role]}${w.title?' — '+esc(w.title):''})</option>`).join('');
-  const dSel = document.getElementById('jobDay');
-  dSel.innerHTML = weekDates().map(d=>`<option value="${dateKey(d)}">${DAY_NAMES[d.getDay()]} ${fmtDay(d)}</option>`).join('');
   document.getElementById('jobSiteNew').value='';
   document.getElementById('jobTypeNew').value='';
   setMultiMode(false);
@@ -741,7 +784,7 @@ function openJobModal(dk, jobId, presetWorker){
     document.getElementById('jobNotes').value = j.notes||'';
     document.getElementById('jobStatus').value = j.status;
     wSel.value = j.workerId;
-    dSel.value = dk;
+    document.getElementById('jobDate').value = dk; updateJobDateName();
     document.getElementById('delJobBtn').style.display='inline-block';
     document.getElementById('dupJobBtn').style.display='inline-block';
   } else {
@@ -754,7 +797,7 @@ function openJobModal(dk, jobId, presetWorker){
     document.getElementById('jobNotes').value='';
     document.getElementById('jobStatus').value='planned';
     if(presetWorker) wSel.value = presetWorker;
-    dSel.value = dk;
+    document.getElementById('jobDate').value = dk; updateJobDateName();
     document.getElementById('delJobBtn').style.display='none';
     document.getElementById('dupJobBtn').style.display='none';
   }
@@ -794,7 +837,8 @@ async function saveJob(){
     status: document.getElementById('jobStatus').value,
   };
   if(data.start && data.end && data.end <= data.start){ toast('שעת הסיום צריכה להיות אחרי ההתחלה'); return; }
-  const newDk = document.getElementById('jobDay').value;
+  const newDk = document.getElementById('jobDate').value;
+  if(!newDk){ toast('חסר תאריך'); return; }
 
   if(editingJob){
     const arr = jobs[editingJob.dateKey]||[];
@@ -807,7 +851,9 @@ async function saveJob(){
       jobs[newDk].push({...old, ...data, workerId: document.getElementById('jobWorker').value});
     }
     await persistJobs();
-    closeJobModal(); render(); toast('נשמר ✓');
+    closeJobModal();
+    weekStart = getWeekStart(new Date(newDk+'T00:00'));
+    render(); toast('נשמר ✓');
     return;
   }
 
@@ -822,7 +868,9 @@ async function saveJob(){
   jobs[newDk] = jobs[newDk]||[];
   workerIds.forEach(wid=>jobs[newDk].push({id:uid(), ...data, workerId:wid}));
   await persistJobs();
-  closeJobModal(); render();
+  closeJobModal();
+  weekStart = getWeekStart(new Date(newDk+'T00:00'));
+  render();
   toast(workerIds.length>1 ? 'נשמרו '+workerIds.length+' שיבוצים ✓' : 'נשמר ✓');
 }
 async function deleteJob(){
@@ -840,6 +888,47 @@ async function duplicateJob(){
   jobs[editingJob.dateKey].push({...j, id:uid()});
   await persistJobs();
   closeJobModal(); render(); toast('שוכפל ✓');
+}
+
+/* ====== move whole day ====== */
+let moveDaySrc = null;
+function openMoveDay(dk){
+  const dayJobs = jobs[dk]||[];
+  if(dayJobs.length===0){ toast('אין עבודות ביום הזה'); return; }
+  moveDaySrc = dk;
+  const d = new Date(dk+'T00:00');
+  document.getElementById('moveDayInfo').textContent =
+    'יום ' + FULL_DAY_NAMES[d.getDay()] + ' ' + fmtDay(d) + ' — ' + dayJobs.length + ' עבודות יעברו יחד לתאריך שתבחר.';
+  document.getElementById('moveDayTarget').value = dk;
+  updateMoveDayName();
+  document.getElementById('moveDayOverlay').classList.add('open');
+}
+function closeMoveDay(){ document.getElementById('moveDayOverlay').classList.remove('open'); moveDaySrc=null; }
+function updateMoveDayName(){
+  const v = document.getElementById('moveDayTarget').value;
+  document.getElementById('moveDayName').textContent = v ? '— יום ' + FULL_DAY_NAMES[new Date(v+'T00:00').getDay()] : '';
+}
+function shiftMoveDay(n){
+  const inp = document.getElementById('moveDayTarget');
+  if(!inp.value) return;
+  const d = new Date(inp.value+'T00:00');
+  d.setDate(d.getDate()+n);
+  inp.value = dateKey(d);
+  updateMoveDayName();
+}
+async function moveDayDo(){
+  const target = document.getElementById('moveDayTarget').value;
+  if(!moveDaySrc || !target){ toast('חסר תאריך יעד'); return; }
+  if(target===moveDaySrc){ toast('זה אותו תאריך 🙂'); return; }
+  const moving = jobs[moveDaySrc]||[];
+  const n = moving.length;
+  jobs[target] = (jobs[target]||[]).concat(moving);
+  delete jobs[moveDaySrc];
+  await persistJobs();
+  closeMoveDay();
+  weekStart = getWeekStart(new Date(target+'T00:00'));
+  render();
+  toast(n + ' עבודות הועברו ✓');
 }
 
 /* ====== WhatsApp ====== */
