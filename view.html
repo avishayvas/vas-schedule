@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VAS Security — לוז עבודה</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700&family=Frank+Ruhl+Libre:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F6F3EC; --surface:#FFF; --ink:#1D1B16; --ink-soft:#6B6557;
+    --gold:#B8860B; --gold-soft:#F3E7C9; --line:#E5DFD2;
+    --emp:#1F6F78; --emp-bg:#E3F0F1; --contractor:#B3552B; --contractor-bg:#F7E6DC;
+    --done:#2E7D46; --done-bg:#E2F2E7; --cancel:#A33A3A;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Heebo',system-ui,sans-serif;background:var(--paper);color:var(--ink);min-height:100vh;padding-bottom:40px}
+  header{
+    background:var(--ink);color:#F6F3EC;padding:14px 18px;border-bottom:3px solid var(--gold);
+    text-align:center;
+  }
+  header h1{font-family:'Frank Ruhl Libre',serif;font-weight:900;font-size:1.25rem;letter-spacing:.5px}
+  header small{color:var(--gold);font-size:.7rem;letter-spacing:2px;display:block;margin-top:2px}
+  .updated{font-size:.7rem;color:#C9C2B0;margin-top:6px}
+  .controls{
+    display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;
+    padding:14px;
+  }
+  .controls select{
+    padding:9px 14px;border:1px solid var(--line);border-radius:8px;
+    font-family:inherit;font-size:.9rem;background:var(--surface);min-width:160px;
+  }
+  button{
+    font-family:inherit;cursor:pointer;border:none;border-radius:8px;
+    font-size:.85rem;font-weight:600;padding:9px 14px;transition:.15s;
+  }
+  .btn-light{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+  .btn-light:hover{border-color:var(--gold);color:var(--gold)}
+  .btn-gold{background:var(--gold);color:#fff}
+  .week-label{font-weight:700;font-size:.92rem;padding:0 6px}
+
+  .content{max-width:640px;margin:0 auto;padding:0 14px}
+  .day-block{margin-bottom:18px}
+  .day-head{
+    font-family:'Frank Ruhl Libre',serif;font-weight:900;font-size:1.02rem;color:#6E5510;
+    background:var(--gold-soft);border-radius:10px;padding:7px 14px;margin-bottom:8px;
+    display:flex;justify-content:space-between;align-items:baseline;
+  }
+  .day-head.today{outline:2px solid var(--gold)}
+  .day-head .cnt{font-family:'Heebo';font-size:.72rem;font-weight:600;color:var(--ink-soft)}
+  .jcard{
+    background:var(--surface);border:1px solid var(--line);border-radius:12px;
+    padding:11px 14px;margin-bottom:8px;border-inline-start:4px solid #DCD6C5;
+  }
+  .jcard.st-active{border-inline-start-color:var(--gold)}
+  .jcard.st-done{border-inline-start-color:var(--done);opacity:.8}
+  .jcard.st-cancel{border-inline-start-color:var(--cancel);opacity:.55;text-decoration:line-through}
+  .jrow1{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .jtime{font-weight:700;font-size:.85rem;color:var(--gold);white-space:nowrap}
+  .jsite{font-weight:700;font-size:.95rem;flex:1}
+  .jtag{
+    font-size:.65rem;font-weight:700;border:1px solid var(--ink-soft);color:var(--ink-soft);
+    border-radius:20px;padding:1px 8px;white-space:nowrap;
+  }
+  .jworker{
+    display:inline-block;font-size:.72rem;font-weight:600;border-radius:20px;padding:2px 9px;margin-top:5px;
+  }
+  .jworker.employee{background:var(--emp-bg);color:var(--emp)}
+  .jworker.contractor{background:var(--contractor-bg);color:var(--contractor)}
+  .jloc{font-size:.8rem;color:var(--ink-soft);margin-top:4px}
+  .jnotes{font-size:.78rem;color:var(--ink-soft);margin-top:3px;font-style:italic}
+  .jstatus{font-size:.7rem;font-weight:700;margin-top:5px;display:inline-block;margin-inline-start:6px}
+  .st-active .jstatus{color:var(--gold)} .st-done .jstatus{color:var(--done)} .st-cancel .jstatus{color:var(--cancel)}
+  .empty-day{font-size:.8rem;color:#B5AE9C;padding:4px 14px 2px}
+  .msg{text-align:center;padding:50px 20px;color:var(--ink-soft)}
+  .view-badge{
+    position:fixed;bottom:12px;inset-inline-start:50%;transform:translateX(50%);
+    background:rgba(29,27,22,.85);color:#F6F3EC;font-size:.68rem;padding:5px 14px;border-radius:20px;
+    pointer-events:none;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>VAS SECURITY</h1>
+  <small>לוז עבודה שבועי</small>
+  <div class="updated" id="updatedAt"></div>
+</header>
+
+<div class="controls">
+  <button class="btn-light" onclick="shiftWeek(1)">◀ הבא</button>
+  <span class="week-label" id="weekLabel"></span>
+  <button class="btn-light" onclick="shiftWeek(-1)">הקודם ▶</button>
+  <button class="btn-gold" onclick="goToday()">היום</button>
+  <select id="workerFilter" onchange="render()"></select>
+</div>
+
+<div class="content" id="content"><div class="msg">טוען לוז...</div></div>
+<div class="view-badge">צפייה בלבד 👁️</div>
+
+<script>
+const DATA_URLS = [
+  'https://raw.githubusercontent.com/avishayvas/vas-schedule/main/data.json',
+  './data.json'
+];
+const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי'];
+const STATUS_NAMES = { planned:'', active:'בביצוע 🔧', done:'הושלם ✓', cancel:'בוטל' };
+
+let DATA = null;
+let weekStart = getWeekStart(new Date());
+
+function getWeekStart(d){ const x=new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate()-x.getDay()); return x; }
+function dateKey(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function fmtDay(d){ return d.getDate()+'.'+(d.getMonth()+1); }
+function weekDates(){ return Array.from({length:6},(_,i)=>{ const d=new Date(weekStart); d.setDate(d.getDate()+i); return d; }); }
+function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function jobSort(a,b){ return (a.start||'99:99').localeCompare(b.start||'99:99'); }
+
+async function loadData(){
+  for(const base of DATA_URLS){
+    try{
+      const res = await fetch(base + '?t=' + Date.now(), {cache:'no-store'});
+      if(!res.ok) continue;
+      DATA = await res.json();
+      return true;
+    }catch(e){}
+  }
+  return false;
+}
+
+function renderWorkerFilter(){
+  const sel = document.getElementById('workerFilter');
+  const cur = sel.value;
+  const ws = [...(DATA.workers||[])].sort((a,b)=>a.role===b.role?0:(a.role==='employee'?-1:1));
+  sel.innerHTML = '<option value="">👥 כל העובדים</option>' +
+    ws.map(w=>`<option value="${w.id}">${esc(w.name)}</option>`).join('');
+  if([...sel.options].some(o=>o.value===cur)) sel.value = cur;
+}
+
+function render(){
+  if(!DATA) return;
+  const ds = weekDates();
+  const last = ds[ds.length-1];
+  document.getElementById('weekLabel').textContent = fmtDay(ds[0]) + ' – ' + fmtDay(last) + '.' + last.getFullYear();
+  if(DATA.updatedAt){
+    const u = new Date(DATA.updatedAt);
+    document.getElementById('updatedAt').textContent = 'עודכן לאחרונה: ' + u.toLocaleString('he-IL', {day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'});
+  }
+  const filterW = document.getElementById('workerFilter').value;
+  const todayKey = dateKey(new Date());
+  const workerById = {}; (DATA.workers||[]).forEach(w=>workerById[w.id]=w);
+
+  let html = '', totalShown = 0;
+  ds.forEach(d=>{
+    const dk = dateKey(d);
+    let dayJobs = ((DATA.jobs||{})[dk]||[]).slice();
+    if(filterW) dayJobs = dayJobs.filter(j=>j.workerId===filterW);
+    dayJobs.sort(jobSort);
+    const isToday = dk===todayKey;
+    html += `<div class="day-block">
+      <div class="day-head ${isToday?'today':''}">
+        <span>יום ${DAY_NAMES[d.getDay()]} ${fmtDay(d)}${isToday?' • היום':''}</span>
+        <span class="cnt">${dayJobs.length ? dayJobs.length + ' עבודות' : ''}</span>
+      </div>`;
+    if(dayJobs.length===0){
+      html += '<div class="empty-day">— אין שיבוצים —</div>';
+    } else {
+      dayJobs.forEach(j=>{
+        const w = workerById[j.workerId];
+        const timeStr = j.start ? (j.start + (j.end?'–'+j.end:'')) : '';
+        html += `<div class="jcard st-${j.status||'planned'}">
+          <div class="jrow1">
+            ${timeStr?`<span class="jtime">${timeStr}</span>`:''}
+            <span class="jsite">${esc(j.site)}</span>
+            ${j.type?`<span class="jtag">${esc(j.type)}</span>`:''}
+          </div>
+          ${j.location?`<div class="jloc">📍 ${esc(j.location)}</div>`:''}
+          ${j.notes?`<div class="jnotes">${esc(j.notes)}</div>`:''}
+          ${w?`<span class="jworker ${w.role}">${esc(w.name)}</span>`:''}
+          ${STATUS_NAMES[j.status]?`<span class="jstatus">${STATUS_NAMES[j.status]}</span>`:''}
+        </div>`;
+        totalShown++;
+      });
+    }
+    html += '</div>';
+  });
+  document.getElementById('content').innerHTML = html;
+}
+
+function shiftWeek(n){ weekStart.setDate(weekStart.getDate()+n*7); render(); }
+function goToday(){ weekStart = getWeekStart(new Date()); render(); }
+
+(async function init(){
+  const ok = await loadData();
+  if(!ok){
+    document.getElementById('content').innerHTML = '<div class="msg">לא הצלחנו לטעון את הלוז כרגע.<br>נסו לרענן בעוד רגע.</div>';
+    return;
+  }
+  renderWorkerFilter();
+  render();
+  // רענון אוטומטי כל דקה
+  setInterval(async ()=>{
+    const before = DATA && DATA.updatedAt;
+    if(await loadData() && DATA.updatedAt !== before){ renderWorkerFilter(); render(); }
+  }, 60000);
+})();
+</script>
+</body>
+</html>
