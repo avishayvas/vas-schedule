@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1D1B16">
 <title>VAS Security — לוז עבודה</title>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700&family=Frank+Ruhl+Libre:wght@700;900&display=swap" rel="stylesheet">
 <style>
@@ -146,7 +147,50 @@
     .mjob .mw{display:none}
   }
 
+  /* עמודת העובד נשארת קבועה בגלילה אופקית */
+  .sched th.worker-col, .sched td.worker-cell{
+    position:sticky;inset-inline-end:0;z-index:2;
+  }
+  .sched td.worker-cell{box-shadow:-3px 0 6px rgba(0,0,0,.06)}
+  .sched th.worker-col{box-shadow:-3px 0 6px rgba(0,0,0,.15)}
+  tr.group-row td{position:sticky;inset-inline-end:0}
+
+  /* מגירת פירוט יום */
+  .sheet-overlay{
+    position:fixed;inset:0;background:rgba(20,18,12,.5);display:none;
+    align-items:flex-end;justify-content:center;z-index:40;
+  }
+  .sheet-overlay.open{display:flex}
+  .sheet{
+    background:var(--paper);border-radius:18px 18px 0 0;width:100%;max-width:640px;
+    max-height:78vh;overflow-y:auto;padding:14px 14px 28px;
+    border-top:3px solid var(--gold);
+  }
+  .sheet-head{
+    font-family:'Frank Ruhl Libre',serif;font-weight:900;font-size:1.05rem;color:#6E5510;
+    display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;
+  }
+  .sheet-head button{background:none;border:none;font-size:1.2rem;color:var(--ink-soft);padding:2px 8px}
+  .mday{cursor:pointer}
+  .mday.out{cursor:default}
+  .sched td .job{cursor:pointer}
+
   .msg{text-align:center;padding:50px 20px;color:var(--ink-soft)}
+
+  @media (max-width:640px){
+    header{padding:10px 12px}
+    header h1{font-size:1.05rem}
+    .controls{padding:10px 8px 2px;gap:6px}
+    .controls button{padding:7px 10px;font-size:.78rem}
+    .range-label{min-width:0;font-size:.84rem}
+    .controls select{flex:1 1 100%;min-width:0}
+    .toggles{padding:6px 8px 10px}
+    table.sched{min-width:720px;font-size:.68rem}
+    .sched th.worker-col{width:104px}
+    .worker-name{font-size:.78rem}
+    .job{font-size:.66rem;padding:3px 5px}
+    .job b{font-size:.69rem}
+  }
   .view-badge{
     position:fixed;bottom:10px;inset-inline-start:50%;transform:translateX(50%);
     background:rgba(29,27,22,.85);color:#F6F3EC;font-size:.66rem;padding:5px 14px;border-radius:20px;
@@ -182,6 +226,12 @@
 </div>
 
 <div class="content" id="content"><div class="msg">טוען לוז...</div></div>
+<div class="sheet-overlay" id="sheetOverlay" onclick="if(event.target===this)closeSheet()">
+  <div class="sheet">
+    <div class="sheet-head"><span id="sheetTitle"></span><button onclick="closeSheet()">✕</button></div>
+    <div id="sheetBody"></div>
+  </div>
+</div>
 <div class="view-badge">צפייה בלבד 👁️</div>
 
 <script>
@@ -257,6 +307,33 @@ function jobsFor(dk, filterW){
   if(filterW) arr = arr.filter(j=>j.workerId===filterW);
   return arr.sort(jobSort);
 }
+function jcardHtml(j, workerById){
+  const w = workerById[j.workerId];
+  const timeStr = j.start ? (j.start + (j.end?'–'+j.end:'')) : '';
+  return `<div class="jcard st-${j.status||'planned'}">
+    <div class="jrow1">
+      ${timeStr?`<span class="jtime">${timeStr}</span>`:''}
+      <span class="jsite">${esc(j.site)}</span>
+      ${j.type?`<span class="jtag">${esc(j.type)}</span>`:''}
+    </div>
+    ${j.location?`<div class="jloc">📍 ${esc(j.location)}</div>`:''}
+    ${j.notes?`<div class="jnotes">${esc(j.notes)}</div>`:''}
+    ${w?`<span class="jworker ${w.role}">${esc(w.name)}</span>`:''}
+    ${STATUS_NAMES[j.status]?`<span class="jstatus">${STATUS_NAMES[j.status]}</span>`:''}
+  </div>`;
+}
+function showDay(dk){
+  const filterW = document.getElementById('workerFilter').value;
+  const dayJobs = jobsFor(dk, filterW);
+  const workerById = {}; (DATA.workers||[]).forEach(w=>workerById[w.id]=w);
+  const d = new Date(dk+'T00:00');
+  document.getElementById('sheetTitle').textContent =
+    'יום ' + DAY_NAMES[d.getDay()] + ' ' + fmtDay(d) + (dayJobs.length ? ' — ' + dayJobs.length + ' עבודות' : '');
+  document.getElementById('sheetBody').innerHTML =
+    dayJobs.length ? dayJobs.map(j=>jcardHtml(j, workerById)).join('') : '<div class="empty-day">— אין שיבוצים —</div>';
+  document.getElementById('sheetOverlay').classList.add('open');
+}
+function closeSheet(){ document.getElementById('sheetOverlay').classList.remove('open'); }
 
 function render(){
   if(!DATA) return;
@@ -308,7 +385,7 @@ function renderWeekTable(filterW){
       html += `<td class="${isToday?'today-col':''}">`;
       dayJobs.forEach(j=>{
         const timeStr = j.start ? (j.start + (j.end?'–'+j.end:'')) : '';
-        html += `<div class="job st-${j.status||'planned'}">
+        html += `<div class="job st-${j.status||'planned'}" onclick="showDay('${dk}')">
           ${timeStr?`<span class="jt">${timeStr}</span> `:''}
           <b>${esc(j.site)}</b>
           ${j.location?`<span class="loc">${esc(j.location)}</span>`:''}
@@ -338,21 +415,7 @@ function renderWeekList(filterW){
         <span class="cnt">${dayJobs.length ? dayJobs.length + ' עבודות' : ''}</span>
       </div>`;
     if(dayJobs.length===0){ html += '<div class="empty-day">— אין שיבוצים —</div>'; }
-    else dayJobs.forEach(j=>{
-      const w = workerById[j.workerId];
-      const timeStr = j.start ? (j.start + (j.end?'–'+j.end:'')) : '';
-      html += `<div class="jcard st-${j.status||'planned'}">
-        <div class="jrow1">
-          ${timeStr?`<span class="jtime">${timeStr}</span>`:''}
-          <span class="jsite">${esc(j.site)}</span>
-          ${j.type?`<span class="jtag">${esc(j.type)}</span>`:''}
-        </div>
-        ${j.location?`<div class="jloc">📍 ${esc(j.location)}</div>`:''}
-        ${j.notes?`<div class="jnotes">${esc(j.notes)}</div>`:''}
-        ${w?`<span class="jworker ${w.role}">${esc(w.name)}</span>`:''}
-        ${STATUS_NAMES[j.status]?`<span class="jstatus">${STATUS_NAMES[j.status]}</span>`:''}
-      </div>`;
-    });
+    else dayJobs.forEach(j=>{ html += jcardHtml(j, workerById); });
     html += '</div>';
   });
   return html;
@@ -375,7 +438,7 @@ function renderMonth(filterW){
     const dk = dateKey(cur);
     const isToday = dk===todayKey;
     const dayJobs = inMonth ? jobsFor(dk, filterW) : [];
-    html += `<div class="mday ${inMonth?'':'out'} ${isToday?'today':''}">
+    html += `<div class="mday ${inMonth?'':'out'} ${isToday?'today':''}" ${inMonth?`onclick="showDay('${dk}')"`:''}>
       <div class="dn">${cur.getDate()}</div>`;
     dayJobs.slice(0,MAX_SHOWN).forEach(j=>{
       const w = workerById[j.workerId];
@@ -400,7 +463,7 @@ function renderMonth(filterW){
     return;
   }
   renderWorkerFilter();
-  render();
+  if(window.innerWidth < 640) setDisplay('list'); else render();
   setInterval(async ()=>{
     const before = DATA && DATA.updatedAt;
     if(await loadData() && DATA.updatedAt !== before){ renderWorkerFilter(); render(); }
