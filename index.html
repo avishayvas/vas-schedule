@@ -177,6 +177,18 @@
   .field-row .field{flex:1}
   .modal-actions{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}
   .modal-actions .spacer{flex:1}
+  .mini-link{
+    background:none;border:none;color:var(--gold);font-size:.76rem;font-weight:600;
+    padding:5px 0 0;text-decoration:underline;cursor:pointer;
+  }
+  .multi-box{
+    max-height:190px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;
+    padding:8px 10px;background:#FDFCF9;margin-top:4px;
+  }
+  .multi-box .grp{font-size:.7rem;font-weight:700;color:#6E5510;margin:6px 0 2px}
+  .multi-box label{display:flex;align-items:center;gap:8px;font-size:.86rem;padding:4px 2px;cursor:pointer}
+  .multi-box input{width:auto}
+  .multi-all{font-size:.74rem;color:var(--gold);background:none;border:none;text-decoration:underline;padding:0;cursor:pointer}
 
   .wlist{max-height:280px;overflow-y:auto;margin-bottom:14px}
   .wrow{
@@ -280,6 +292,8 @@
       <div class="field">
         <label>עובד</label>
         <select id="jobWorker"></select>
+        <div id="multiWorkerBox" class="multi-box" style="display:none"></div>
+        <button type="button" class="mini-link" id="multiToggle" onclick="toggleMultiWorker()">＋ שיבוץ לכמה עובדים בבת אחת</button>
       </div>
       <div class="field">
         <label>יום</label>
@@ -319,7 +333,7 @@
         <div class="field"><label>שם *</label><input id="wName" placeholder="שם"></div>
         <div class="field"><label>סוג</label>
           <select id="wRole">
-            <option value="employee">עובד שכיר</option>
+            <option value="employee">עובד חברה</option>
             <option value="contractor">קבלן</option>
           </select>
         </div>
@@ -396,9 +410,9 @@
 const KEYS = { meta:'vas-schedule:meta', workers:'vas-schedule:workers', jobs:'vas-schedule:jobs', sites:'vas-schedule:sites', types:'vas-schedule:types' };
 const VERSION = 3;
 const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי'];
-const ROLE_NAMES = { employee:'שכיר', contractor:'קבלן' };
+const ROLE_NAMES = { employee:'עובד חברה', contractor:'קבלן' };
 const ROLE_ORDER = ['employee','contractor'];
-const ROLE_GROUP = { employee:'עובדים שכירים', contractor:'קבלנים' };
+const ROLE_GROUP = { employee:'עובדי חברה', contractor:'קבלנים' };
 const STATUS_NAMES = { planned:'מתוכנן', active:'בביצוע', done:'הושלם', cancel:'בוטל' };
 
 let workers = [];
@@ -676,6 +690,33 @@ function onTypeSelect(){
   inp.style.display = isNew ? 'block' : 'none';
   if(isNew) setTimeout(()=>inp.focus(),30);
 }
+
+/* ====== multi-worker assign ====== */
+let multiMode = false;
+function setMultiMode(on){
+  multiMode = on;
+  document.getElementById('jobWorker').style.display = on ? 'none' : 'block';
+  document.getElementById('multiWorkerBox').style.display = on ? 'block' : 'none';
+  document.getElementById('multiToggle').textContent = on ? '− חזרה לעובד יחיד' : '＋ שיבוץ לכמה עובדים בבת אחת';
+  if(on) renderMultiWorkerBox();
+}
+function toggleMultiWorker(){ setMultiMode(!multiMode); }
+function renderMultiWorkerBox(){
+  const box = document.getElementById('multiWorkerBox');
+  box.innerHTML = '<button type="button" class="multi-all" onclick="multiSelectAll(this)">סמן את כולם</button>' +
+    ROLE_ORDER.map(role=>{
+      const grp = workers.filter(w=>w.role===role);
+      if(!grp.length) return '';
+      return `<div class="grp">${ROLE_GROUP[role]}</div>` + grp.map(w=>
+        `<label><input type="checkbox" value="${w.id}"> ${esc(w.name)}${w.title?' — '+esc(w.title):''}</label>`).join('');
+    }).join('');
+}
+function multiSelectAll(btn){
+  const boxes = [...document.querySelectorAll('#multiWorkerBox input[type=checkbox]')];
+  const allChecked = boxes.every(b=>b.checked);
+  boxes.forEach(b=>b.checked = !allChecked);
+  btn.textContent = allChecked ? 'סמן את כולם' : 'נקה סימון';
+}
 function openJobModal(dk, jobId, presetWorker){
   editingJob = jobId ? {dateKey:dk, id:jobId} : null;
   const wSel = document.getElementById('jobWorker');
@@ -685,6 +726,8 @@ function openJobModal(dk, jobId, presetWorker){
   dSel.innerHTML = weekDates().map(d=>`<option value="${dateKey(d)}">${DAY_NAMES[d.getDay()]} ${fmtDay(d)}</option>`).join('');
   document.getElementById('jobSiteNew').value='';
   document.getElementById('jobTypeNew').value='';
+  setMultiMode(false);
+  document.getElementById('multiToggle').style.display = jobId ? 'none' : 'inline';
 
   if(jobId){
     const j = (jobs[dk]||[]).find(x=>x.id===jobId);
@@ -749,7 +792,6 @@ async function saveJob(){
     end: document.getElementById('jobEnd').value,
     notes: document.getElementById('jobNotes').value.trim(),
     status: document.getElementById('jobStatus').value,
-    workerId: document.getElementById('jobWorker').value,
   };
   if(data.start && data.end && data.end <= data.start){ toast('שעת הסיום צריכה להיות אחרי ההתחלה'); return; }
   const newDk = document.getElementById('jobDay').value;
@@ -762,14 +804,26 @@ async function saveJob(){
       arr.splice(idx,1);
       if(arr.length===0) delete jobs[editingJob.dateKey];
       jobs[newDk] = jobs[newDk]||[];
-      jobs[newDk].push({...old, ...data});
+      jobs[newDk].push({...old, ...data, workerId: document.getElementById('jobWorker').value});
     }
-  } else {
-    jobs[newDk] = jobs[newDk]||[];
-    jobs[newDk].push({id:uid(), ...data});
+    await persistJobs();
+    closeJobModal(); render(); toast('נשמר ✓');
+    return;
   }
+
+  // עבודה חדשה — עובד יחיד או קבוצה
+  let workerIds;
+  if(multiMode){
+    workerIds = [...document.querySelectorAll('#multiWorkerBox input:checked')].map(i=>i.value);
+    if(workerIds.length===0){ toast('סמן לפחות עובד אחד'); return; }
+  } else {
+    workerIds = [document.getElementById('jobWorker').value];
+  }
+  jobs[newDk] = jobs[newDk]||[];
+  workerIds.forEach(wid=>jobs[newDk].push({id:uid(), ...data, workerId:wid}));
   await persistJobs();
-  closeJobModal(); render(); toast('נשמר ✓');
+  closeJobModal(); render();
+  toast(workerIds.length>1 ? 'נשמרו '+workerIds.length+' שיבוצים ✓' : 'נשמר ✓');
 }
 async function deleteJob(){
   if(!editingJob) return;
