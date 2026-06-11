@@ -1,0 +1,112 @@
+{
+  "version": 3,
+  "updatedAt": "2026-06-11T13:15:29.282Z",
+  "workers": [
+    {
+      "id": "mq9isxhew5erm",
+      "name": "ז'נט",
+      "role": "employee",
+      "title": "",
+      "phone": ""
+    },
+    {
+      "id": "mq9isxheve8hs",
+      "name": "ליאל",
+      "role": "employee",
+      "title": "מנהל פרויקטים",
+      "phone": ""
+    },
+    {
+      "id": "mq9isxhewfmwj",
+      "name": "תרשיש",
+      "role": "employee",
+      "title": "",
+      "phone": ""
+    },
+    {
+      "id": "mq9isxhem3m63",
+      "name": "איגור",
+      "role": "employee",
+      "title": "",
+      "phone": ""
+    },
+    {
+      "id": "mq9isxheht43x",
+      "name": "ליאור",
+      "role": "employee",
+      "title": "",
+      "phone": ""
+    },
+    {
+      "id": "mq9isxheoiscu",
+      "name": "רפאל",
+      "role": "employee",
+      "title": "",
+      "phone": ""
+    },
+    {
+      "id": "mq9isxhesfz6e",
+      "name": "הילה",
+      "role": "employee",
+      "title": "מנהלת משרד",
+      "phone": ""
+    },
+    {
+      "id": "mq9isxhekgpkg",
+      "name": "אנדריי",
+      "role": "contractor",
+      "title": "",
+      "phone": ""
+    },
+    {
+      "id": "mq9isxhey4jeb",
+      "name": "דביר",
+      "role": "contractor",
+      "title": "",
+      "phone": ""
+    },
+    {
+      "id": "mq9isxheujqpo",
+      "name": "דולב",
+      "role": "contractor",
+      "title": "",
+      "phone": ""
+    },
+    {
+      "id": "mq9isxhedlndl",
+      "name": "בריס",
+      "role": "contractor",
+      "title": "",
+      "phone": ""
+    },
+    {
+      "id": "mq9isxhee6dcl",
+      "name": "עוזי",
+      "role": "contractor",
+      "title": "",
+      "phone": ""
+    },
+    {
+      "id": "mq9isxheb00qj",
+      "name": "מתן",
+      "role": "contractor",
+      "title": "",
+      "phone": ""
+    }
+  ],
+  "jobs": {},
+  "sites": [
+    "הקפיטל ירושלים",
+    "יובלים נס ציונה",
+    "מקס סטוק",
+    "חיריה"
+  ],
+  "types": [
+    "גילוי אש",
+    "ביטחון",
+    "תקשורת",
+    "בקרת כניסה",
+    "אינטרקום",
+    "שירות / תקלה"
+  ]
+}
