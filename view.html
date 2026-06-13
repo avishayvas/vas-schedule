@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#1D1B16">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <title>VAS Security — לוז עבודה</title>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700&family=Frank+Ruhl+Libre:wght@700;900&display=swap" rel="stylesheet">
 <style>
@@ -253,10 +255,19 @@
 <div class="view-badge">צפייה בלבד 👁️</div>
 
 <script>
-const DATA_URLS = [
-  'https://raw.githubusercontent.com/avishayvas/vas-schedule/main/data.json',
-  './data.json'
-];
+/* ====== Firebase init ====== */
+const FB_CONFIG = {
+  apiKey: "AIzaSyD0_Ji35W2rlaqYjYRqAU-sTksZm0CRDaY",
+  projectId: "vas-schedule",
+  storageBucket: "vas-schedule.firebasestorage.app",
+  messagingSenderId: "763095300879",
+  appId: "1:763095300879:web:7d42c00f856ba8fd365c7a"
+};
+firebase.initializeApp(FB_CONFIG);
+const db = firebase.firestore();
+const SCHED_REF = db.collection('vas').doc('schedule');
+
+/* ====== קבועים ====== */
 const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
 const DAY_SHORT = ['א','ב','ג','ד','ה','ו','ש'];
 const MONTH_NAMES = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
@@ -265,10 +276,11 @@ const ROLE_GROUP = { employee:'עובדי חברה', contractor:'קבלנים' }
 const ROLE_ORDER = ['employee','contractor'];
 
 let DATA = null;
-let mode = 'week';        // week | month
-let display = 'table';    // table | list (לשבוע בלבד)
+let mode = 'week';
+let display = 'table';
 let weekStart = getWeekStart(new Date());
 let monthDate = new Date(); monthDate.setDate(1);
+let initialized = false;
 
 function getWeekStart(d){ const x=new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate()-x.getDay()); return x; }
 function dateKey(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
@@ -276,18 +288,6 @@ function fmtDay(d){ return d.getDate()+'.'+(d.getMonth()+1); }
 function weekDates(){ return Array.from({length:6},(_,i)=>{ const d=new Date(weekStart); d.setDate(d.getDate()+i); return d; }); }
 function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function jobSort(a,b){ return (a.start||'99:99').localeCompare(b.start||'99:99'); }
-
-async function loadData(){
-  for(const base of DATA_URLS){
-    try{
-      const res = await fetch(base + '?t=' + Date.now(), {cache:'no-store'});
-      if(!res.ok) continue;
-      DATA = await res.json();
-      return true;
-    }catch(e){}
-  }
-  return false;
-}
 
 function setMode(m){
   mode = m;
@@ -373,7 +373,8 @@ function showJob(dk, jobId){
     </div>`;
   }
   if(j.status && j.status!=='planned'){
-    html += `<div class="jd-status ${j.status}">${STATUS_NAMES[j.status]||''}</div>`;
+    const stNames = {active:'בביצוע 🔧', done:'הושלם ✓', cancel:'בוטל'};
+    html += `<div class="jd-status ${j.status}">${stNames[j.status]||''}</div>`;
   }
   document.getElementById('sheetBody').innerHTML = html;
   document.getElementById('sheetOverlay').classList.add('open');
@@ -383,7 +384,7 @@ function render(){
   if(!DATA) return;
   if(DATA.updatedAt){
     const u = new Date(DATA.updatedAt);
-    document.getElementById('updatedAt').textContent = 'עודכן לאחרונה: ' + u.toLocaleString('he-IL',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'});
+    document.getElementById('updatedAt').textContent = 'עודכן: ' + u.toLocaleString('he-IL',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'});
   }
   const filterW = document.getElementById('workerFilter').value;
   if(mode==='week'){
@@ -404,14 +405,12 @@ function renderWeekTable(filterW){
   const workerById = {}; (DATA.workers||[]).forEach(w=>workerById[w.id]=w);
   let workersToShow = ROLE_ORDER.flatMap(r=>(DATA.workers||[]).filter(w=>w.role===r));
   if(filterW) workersToShow = workersToShow.filter(w=>w.id===filterW);
-
   let html = '<div class="table-wrap"><table class="sched"><thead><tr><th class="worker-col">עובד</th>';
   ds.forEach(d=>{
     const isToday = dateKey(d)===todayKey;
     html += `<th class="${isToday?'today-col':''}">${DAY_NAMES[d.getDay()]}<span class="dnum">${fmtDay(d)}${isToday?' • היום':''}</span></th>`;
   });
   html += '</tr></thead><tbody>';
-
   let lastRole = null;
   workersToShow.forEach(w=>{
     if(!filterW && w.role!==lastRole){
@@ -423,8 +422,7 @@ function renderWeekTable(filterW){
       <span class="worker-role role-${w.role}">${w.title?esc(w.title):(w.role==='contractor'?'קבלן':'עובד חברה')}</span>
     </td>`;
     ds.forEach(d=>{
-      const dk = dateKey(d);
-      const isToday = dk===todayKey;
+      const dk = dateKey(d); const isToday = dk===todayKey;
       const dayJobs = jobsFor(dk, null).filter(j=>j.workerId===w.id);
       html += `<td class="${isToday?'today-col':''}">`;
       dayJobs.forEach(j=>{
@@ -445,14 +443,11 @@ function renderWeekTable(filterW){
 
 /* ===== שבוע — רשימה ===== */
 function renderWeekList(filterW){
-  const ds = weekDates();
-  const todayKey = dateKey(new Date());
+  const ds = weekDates(); const todayKey = dateKey(new Date());
   const workerById = {}; (DATA.workers||[]).forEach(w=>workerById[w.id]=w);
   let html = '';
   ds.forEach(d=>{
-    const dk = dateKey(d);
-    const dayJobs = jobsFor(dk, filterW);
-    const isToday = dk===todayKey;
+    const dk = dateKey(d); const dayJobs = jobsFor(dk, filterW); const isToday = dk===todayKey;
     html += `<div class="day-block">
       <div class="day-head ${isToday?'today':''}">
         <span>יום ${DAY_NAMES[d.getDay()]} ${fmtDay(d)}${isToday?' • היום':''}</span>
@@ -465,25 +460,20 @@ function renderWeekList(filterW){
   return html;
 }
 
-/* ===== חודש — לוח שנה ===== */
+/* ===== חודש ===== */
 function renderMonth(filterW){
   const y = monthDate.getFullYear(), m = monthDate.getMonth();
-  const first = new Date(y, m, 1);
-  const gridStart = getWeekStart(first);
+  const first = new Date(y, m, 1); const gridStart = getWeekStart(first);
   const todayKey = dateKey(new Date());
   const workerById = {}; (DATA.workers||[]).forEach(w=>workerById[w.id]=w);
   const MAX_SHOWN = 3;
-
   let html = '<div class="month-grid">';
   DAY_SHORT.forEach(n=>html += `<div class="mh">${n}</div>`);
   const cur = new Date(gridStart);
   for(let i=0;i<42;i++){
-    const inMonth = cur.getMonth()===m;
-    const dk = dateKey(cur);
-    const isToday = dk===todayKey;
+    const inMonth = cur.getMonth()===m; const dk = dateKey(cur); const isToday = dk===todayKey;
     const dayJobs = inMonth ? jobsFor(dk, filterW) : [];
-    html += `<div class="mday ${inMonth?'':'out'} ${isToday?'today':''}" ${inMonth?`onclick="showDay('${dk}')"`:''}>
-      <div class="dn">${cur.getDate()}</div>`;
+    html += `<div class="mday ${inMonth?'':'out'} ${isToday?'today':''}" ${inMonth?`onclick="showDay('${dk}')"`:''}><div class="dn">${cur.getDate()}</div>`;
     dayJobs.slice(0,MAX_SHOWN).forEach(j=>{
       const w = workerById[j.workerId];
       html += `<div class="mjob st-${j.status||'planned'}" onclick="event.stopPropagation();showJob('${dk}','${j.id}')">
@@ -493,26 +483,283 @@ function renderMonth(filterW){
     if(dayJobs.length>MAX_SHOWN) html += `<div class="more">+${dayJobs.length-MAX_SHOWN} נוספות</div>`;
     html += '</div>';
     cur.setDate(cur.getDate()+1);
-    // עצירה אחרי השבוע שמכיל את סוף החודש
     if(i%7===6 && cur.getMonth()!==m && cur > first) break;
   }
   html += '</div>';
   return html;
 }
 
-(async function init(){
-  const ok = await loadData();
-  if(!ok){
-    document.getElementById('content').innerHTML = '<div class="msg">לא הצלחנו לטעון את הלוז כרגע.<br>נסו לרענן בעוד רגע.</div>';
-    return;
-  }
-  renderWorkerFilter();
-  if(window.innerWidth < 640) setDisplay('list'); else render();
-  setInterval(async ()=>{
-    const before = DATA && DATA.updatedAt;
-    if(await loadData() && DATA.updatedAt !== before){ renderWorkerFilter(); render(); }
-  }, 60000);
+/* ====== init עם Firebase real-time ====== */
+(function init(){
+  document.getElementById('content').innerHTML = '<div class="msg">טוען לוז...</div>';
+  SCHED_REF.onSnapshot(snap => {
+    if(!snap.exists){
+      document.getElementById('content').innerHTML = '<div class="msg">הלוז עדיין ריק.<br>ביקש ממנהל לשבץ עבודות.</div>';
+      return;
+    }
+    DATA = snap.data();
+    if(!initialized){
+      renderWorkerFilter();
+      if(window.innerWidth < 640) setDisplay('list'); else render();
+      initialized = true;
+    } else {
+      renderWorkerFilter();
+      render();
+    }
+  }, err => {
+    document.getElementById('content').innerHTML = '<div class="msg">שגיאה בטעינת הלוז.<br>בדוק חיבור לאינטרנט ורענן.</div>';
+  });
 })();
 </script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<title>VAS Security — לוז עבודה</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700&family=Frank+Ruhl+Libre:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F6F3EC; --surface:#FFF; --ink:#1D1B16; --ink-soft:#6B6557;
+    --gold:#B8860B; --gold-soft:#F3E7C9; --line:#E5DFD2;
+    --emp:#1F6F78; --emp-bg:#E3F0F1; --contractor:#B3552B; --contractor-bg:#F7E6DC;
+    --done:#2E7D46; --done-bg:#E2F2E7; --cancel:#A33A3A;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Heebo',system-ui,sans-serif;background:var(--paper);color:var(--ink);min-height:100vh;padding-bottom:50px}
+  header{
+    background:var(--ink);color:#F6F3EC;padding:12px 18px;border-bottom:3px solid var(--gold);text-align:center;
+  }
+  header h1{font-family:'Frank Ruhl Libre',serif;font-weight:900;font-size:1.2rem;letter-spacing:.5px}
+  header small{color:var(--gold);font-size:.68rem;letter-spacing:2px;display:block;margin-top:2px}
+  .updated{font-size:.68rem;color:#C9C2B0;margin-top:5px}
+
+  .controls{
+    display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;padding:12px 14px 4px;
+  }
+  .controls select{
+    padding:8px 12px;border:1px solid var(--line);border-radius:8px;
+    font-family:inherit;font-size:.88rem;background:var(--surface);
+  }
+  button{
+    font-family:inherit;cursor:pointer;border:none;border-radius:8px;
+    font-size:.84rem;font-weight:600;padding:8px 13px;transition:.15s;
+  }
+  .btn-light{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+  .btn-light:hover{border-color:var(--gold);color:var(--gold)}
+  .btn-gold{background:var(--gold);color:#fff}
+  .range-label{font-weight:700;font-size:.92rem;padding:0 4px;min-width:120px;text-align:center}
+
+  .toggles{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:6px 14px 12px}
+  .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+  .seg button{border-radius:0;background:var(--surface);color:var(--ink-soft);padding:7px 16px;font-size:.8rem}
+  .seg button.on{background:var(--gold);color:#fff}
+
+  .content{padding:0 12px;max-width:1100px;margin:0 auto}
+
+  /* ===== LIST ===== */
+  .day-block{margin-bottom:16px;max-width:640px;margin-inline:auto}
+  .day-head{
+    font-family:'Frank Ruhl Libre',serif;font-weight:900;font-size:1rem;color:#6E5510;
+    background:var(--gold-soft);border-radius:10px;padding:6px 14px;margin-bottom:8px;
+    display:flex;justify-content:space-between;align-items:baseline;
+  }
+  .day-head.today{outline:2px solid var(--gold)}
+  .day-head .cnt{font-family:'Heebo';font-size:.7rem;font-weight:600;color:var(--ink-soft)}
+  .jcard{
+    background:var(--surface);border:1px solid var(--line);border-radius:12px;
+    padding:10px 14px;margin-bottom:8px;border-inline-start:4px solid #DCD6C5;
+  }
+  .jcard.st-active{border-inline-start-color:var(--gold)}
+  .jcard.st-done{border-inline-start-color:var(--done);opacity:.8}
+  .jcard.st-cancel{border-inline-start-color:var(--cancel);opacity:.55;text-decoration:line-through}
+  .jrow1{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .jtime{font-weight:700;font-size:.84rem;color:var(--gold);white-space:nowrap}
+  .jsite{font-weight:700;font-size:.94rem;flex:1}
+  .jtag{
+    font-size:.64rem;font-weight:700;border:1px solid var(--ink-soft);color:var(--ink-soft);
+    border-radius:20px;padding:1px 8px;white-space:nowrap;
+  }
+  .jworker{display:inline-block;font-size:.71rem;font-weight:600;border-radius:20px;padding:2px 9px;margin-top:5px}
+  .jworker.employee{background:var(--emp-bg);color:var(--emp)}
+  .jworker.contractor{background:var(--contractor-bg);color:var(--contractor)}
+  .jloc{font-size:.78rem;color:var(--ink-soft);margin-top:4px}
+  .jnotes{font-size:.76rem;color:var(--ink-soft);margin-top:3px;font-style:italic}
+  .jstatus{font-size:.68rem;font-weight:700;margin-top:5px;display:inline-block;margin-inline-start:6px}
+  .st-active .jstatus{color:var(--gold)} .st-done .jstatus{color:var(--done)} .st-cancel .jstatus{color:var(--cancel)}
+  .empty-day{font-size:.78rem;color:#B5AE9C;padding:2px 14px 4px}
+
+  /* ===== WEEK TABLE ===== */
+  .table-wrap{overflow-x:auto;padding-bottom:8px}
+  table.sched{
+    border-collapse:separate;border-spacing:0;width:100%;min-width:860px;
+    background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden;
+  }
+  .sched th{
+    background:var(--ink);color:#F6F3EC;padding:9px 6px;font-size:.8rem;font-weight:600;
+    border-inline-start:1px solid rgba(255,255,255,.08);
+  }
+  .sched th .dnum{display:block;color:var(--gold);font-size:.7rem;font-weight:500;margin-top:2px}
+  .sched th.today-col{background:#4A4128}
+  .sched th.worker-col{width:140px;text-align:right;padding-inline-start:12px}
+  .sched td{
+    border-top:1px solid var(--line);border-inline-start:1px solid var(--line);
+    vertical-align:top;padding:4px;min-height:54px;height:54px;
+  }
+  td.today-col{background:#FDFAF1}
+  .worker-cell{padding:7px 10px !important;background:#FCFAF5}
+  .worker-name{font-weight:700;font-size:.86rem}
+  .worker-role{font-size:.66rem;font-weight:600;padding:1px 8px;border-radius:20px;display:inline-block;margin-top:3px}
+  .role-employee{background:var(--emp-bg);color:var(--emp)}
+  .role-contractor{background:var(--contractor-bg);color:var(--contractor)}
+  tr.group-row td{
+    background:var(--gold-soft);font-family:'Frank Ruhl Libre',serif;font-weight:900;
+    font-size:.9rem;padding:5px 12px;color:#6E5510;
+  }
+  .job{
+    border-radius:7px;padding:4px 7px;margin-bottom:4px;font-size:.72rem;line-height:1.3;
+    border:1px solid transparent;
+  }
+  .job .jt{font-weight:700;font-size:.68rem}
+  .job b{display:block;font-size:.75rem}
+  .job .loc{opacity:.75}
+  .job.st-planned{background:#F3F1EA;border-color:#DCD6C5;color:#55503F}
+  .job.st-active{background:var(--gold-soft);border-color:#E0C98A;color:#6E5510}
+  .job.st-done{background:var(--done-bg);border-color:#BCDFC7;color:var(--done)}
+  .job.st-cancel{background:#F8ECEC;border-color:#E5C9C9;color:var(--cancel);text-decoration:line-through;opacity:.7}
+
+  /* ===== MONTH ===== */
+  .month-grid{
+    display:grid;grid-template-columns:repeat(7,1fr);gap:5px;
+  }
+  .mh{
+    text-align:center;font-size:.74rem;font-weight:700;color:#6E5510;
+    background:var(--gold-soft);border-radius:7px;padding:4px 0;
+  }
+  .mday{
+    background:var(--surface);border:1px solid var(--line);border-radius:9px;
+    min-height:78px;padding:4px 5px;font-size:.68rem;
+  }
+  .mday.out{opacity:.35;background:transparent}
+  .mday.today{outline:2px solid var(--gold)}
+  .mday .dn{font-weight:700;font-size:.74rem;margin-bottom:2px;color:var(--ink-soft)}
+  .mday.today .dn{color:var(--gold)}
+  .mjob{
+    border-radius:5px;padding:2px 5px;margin-bottom:3px;line-height:1.25;
+    background:#F3F1EA;border:1px solid #DCD6C5;color:#55503F;overflow:hidden;
+  }
+  .mjob.st-active{background:var(--gold-soft);border-color:#E0C98A;color:#6E5510}
+  .mjob.st-done{background:var(--done-bg);border-color:#BCDFC7;color:var(--done)}
+  .mjob.st-cancel{background:#F8ECEC;border-color:#E5C9C9;color:var(--cancel);text-decoration:line-through;opacity:.7}
+  .mjob b{font-weight:700}
+  .mjob .mw{opacity:.8}
+  .more{font-size:.64rem;color:var(--gold);font-weight:700;padding:1px 4px}
+  @media (max-width:560px){
+    .mday{min-height:62px;font-size:.6rem;padding:3px 3px}
+    .mjob .mw{display:none}
+  }
+
+  /* עמודת העובד נשארת קבועה בגלילה אופקית */
+  .sched th.worker-col, .sched td.worker-cell{
+    position:sticky;inset-inline-end:0;z-index:2;
+  }
+  .sched td.worker-cell{box-shadow:-3px 0 6px rgba(0,0,0,.06)}
+  .sched th.worker-col{box-shadow:-3px 0 6px rgba(0,0,0,.15)}
+  tr.group-row td{position:sticky;inset-inline-end:0}
+
+  /* מגירת פירוט יום */
+  .sheet-overlay{
+    position:fixed;inset:0;background:rgba(20,18,12,.5);display:none;
+    align-items:flex-end;justify-content:center;z-index:40;
+  }
+  .sheet-overlay.open{display:flex}
+  .sheet{
+    background:var(--paper);border-radius:18px 18px 0 0;width:100%;max-width:640px;
+    max-height:78vh;overflow-y:auto;padding:14px 14px 28px;
+    border-top:3px solid var(--gold);
+  }
+  .sheet-head{
+    font-family:'Frank Ruhl Libre',serif;font-weight:900;font-size:1.05rem;color:#6E5510;
+    display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;
+  }
+  .sheet-head button{background:none;border:none;font-size:1.2rem;color:var(--ink-soft);padding:2px 8px}
+  .mday{cursor:pointer}
+  .mday.out{cursor:default}
+  .sched td .job{cursor:pointer}
+
+  .msg{text-align:center;padding:50px 20px;color:var(--ink-soft)}
+
+  /* חלון פרטי עבודה */
+  .jd-site{font-family:'Frank Ruhl Libre',serif;font-weight:900;font-size:1.3rem;margin-bottom:2px}
+  .jd-when{font-size:.95rem;font-weight:700;color:var(--gold);margin-bottom:10px}
+  .jd-row{display:flex;gap:8px;align-items:baseline;font-size:.88rem;margin-bottom:7px}
+  .jd-row .ico{width:22px;text-align:center}
+  .note-box{
+    background:var(--gold-soft);border:1px solid #E0C98A;border-radius:12px;
+    padding:11px 14px;margin-top:12px;
+  }
+  .note-box .nb-title{font-weight:700;font-size:.8rem;color:#6E5510;margin-bottom:4px}
+  .note-box .nb-body{font-size:.92rem;line-height:1.55;white-space:pre-wrap}
+  .jd-status{display:inline-block;font-size:.78rem;font-weight:700;border-radius:20px;padding:3px 12px;margin-top:12px}
+  .jd-status.active{background:var(--gold-soft);color:#6E5510}
+  .jd-status.done{background:var(--done-bg);color:var(--done)}
+  .jd-status.cancel{background:#F8ECEC;color:var(--cancel)}
+  .jcard{cursor:pointer}
+  .sheet .jcard{cursor:default}
+
+  @media (max-width:640px){
+    header{padding:10px 12px}
+    header h1{font-size:1.05rem}
+    .controls{padding:10px 8px 2px;gap:6px}
+    .controls button{padding:7px 10px;font-size:.78rem}
+    .range-label{min-width:0;font-size:.84rem}
+    .controls select{flex:1 1 100%;min-width:0}
+    .toggles{padding:6px 8px 10px}
+    table.sched{min-width:720px;font-size:.68rem}
+    .sched th.worker-col{width:104px}
+    .worker-name{font-size:.78rem}
+    .job{font-size:.66rem;padding:3px 5px}
+    .job b{font-size:.69rem}
+  }
+  .view-badge{
+    position:fixed;bottom:10px;inset-inline-start:50%;transform:translateX(50%);
+    background:rgba(29,27,22,.85);color:#F6F3EC;font-size:.66rem;padding:5px 14px;border-radius:20px;
+    pointer-events:none;z-index:5;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>VAS SECURITY</h1>
+  <small>לוז עבודה</small>
+  <div class="updated" id="updatedAt"></div>
+</header>
+
+<div class="controls">
+  <button class="btn-light" onclick="nav(1)">◀ הבא</button>
+  <span class="range-label" id="rangeLabel"></span>
+  <button class="btn-light" onclick="nav(-1)">הקודם ▶</button>
+  <button class="btn-gold" onclick="goToday()">היום</button>
+  <select id="workerFilter" onchange="render()"></select>
+</div>
+
+<div class="toggles">
+  <div class="seg" id="modeSeg">
+    <button data-v="week" class="on" onclick="setMode('week')">שבוע</button>
+    <button data-v="month" onclick="setMode('month')">חודש</button>
+  </div>
+  <div class="seg" id="dispSeg">
+    <button data-v="table" class="on" onclick="setDisplay('table')">טבלה</button>
+    <button data-v="list" onclick="setDisplay('list')">רשימה</button>
+  </div>
+</div>
+
+<div class="content" id="content"><div class="msg">טוען לוז...</div></div>
+<div class="sheet-overlay" id="sheetOverlay" onclick="if(event.target===this)closeSheet()">
+  <div class="sheet">
+    <div class="sheet-head"><span id="sheetTitle"></span><button onclick="closeSheet()">✕</button></div>
+    <div id="sheetBody"></div>
+  </div>
+</div>
+<div class="view-badge">צפייה בלבד 👁️</div>
+
+
 </body>
 </html>
