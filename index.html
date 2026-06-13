@@ -233,6 +233,8 @@
     .today-chip{display:none}
   }
 </style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
@@ -259,8 +261,7 @@
   <button class="btn-light" onclick="window.print()">🖨️ הדפסה</button>
   <button class="btn-light" onclick="exportData()">⬇️ גיבוי</button>
   <button class="btn-light" onclick="document.getElementById('importFile').click()">⬆️ שחזור</button>
-  <button class="btn-light" onclick="openSyncModal()">☁️ סנכרון</button>
-  <span class="sync-chip" id="syncChip">מקומי בלבד</span>
+  <span class="sync-chip" id="syncChip">מתחבר לענן...</span>
   <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
   <div class="stats" id="statsBar"></div>
 </div>
@@ -401,28 +402,6 @@
   </div>
 </div>
 
-<!-- Sync modal -->
-<div class="overlay" id="syncOverlay">
-  <div class="modal">
-    <h2>☁️ סנכרון לענן</h2>
-    <p style="font-size:.83rem;color:var(--ink-soft);line-height:1.6;margin-bottom:14px">
-      הסנכרון שומר את הלוז ב-GitHub, כך שהמחשב והטלפון שלך רואים את אותם נתונים,
-      ודף הצפייה של העובדים מתעדכן אוטומטית.
-      צריך להדביק כאן טוקן פעם אחת בכל מכשיר (הוראות ליצירת טוקן — אצל קלוד 😉).
-    </p>
-    <div class="field">
-      <label>GitHub Token</label>
-      <input id="ghTokenInput" type="password" placeholder="github_pat_... או ghp_...">
-    </div>
-    <div class="modal-actions">
-      <button class="btn-gold" onclick="saveSyncSettings()">שמירה ובדיקת חיבור</button>
-      <button class="btn-light" onclick="closeSyncModal()">סגירה</button>
-      <div class="spacer"></div>
-      <button class="btn-danger" onclick="clearSyncSettings()">ניתוק</button>
-    </div>
-  </div>
-</div>
-
 <!-- Move day modal -->
 <div class="overlay" id="moveDayOverlay">
   <div class="modal">
@@ -513,10 +492,10 @@ async function sSet(key,val){
   try{ localStorage.setItem(key, JSON.stringify(val)); }
   catch(e){ memFallback = true; }
 }
-async function persistWorkers(){ await sSet(KEYS.workers, workers); scheduleCloudSave(); }
-async function persistJobs(){ await sSet(KEYS.jobs, jobs); scheduleCloudSave(); }
-async function persistSites(){ await sSet(KEYS.sites, sites); scheduleCloudSave(); }
-async function persistTypes(){ await sSet(KEYS.types, types); scheduleCloudSave(); }
+async function persistWorkers(){ await sSet(KEYS.workers, workers); scheduleFbSave(); }
+async function persistJobs(){ await sSet(KEYS.jobs, jobs); scheduleFbSave(); }
+async function persistSites(){ await sSet(KEYS.sites, sites); scheduleFbSave(); }
+async function persistTypes(){ await sSet(KEYS.types, types); scheduleFbSave(); }
 
 function buildDefaultWorkers(){
   const arr = [];
@@ -1136,11 +1115,17 @@ async function removeType(i){
   renderTypesList(); toast('נמחק');
 }
 
-/* ====== cloud sync (GitHub as backend) ====== */
-const GH = { owner:'avishayvas', repo:'vas-schedule', path:'data.json' };
-const TOKEN_KEY = 'vas-schedule:gh-token';
-function getGhToken(){ try{ return localStorage.getItem(TOKEN_KEY) || ''; }catch(e){ return ''; } }
-function setGhToken(t){ try{ if(t) localStorage.setItem(TOKEN_KEY, t); else localStorage.removeItem(TOKEN_KEY); }catch(e){} }
+/* ====== Firebase ====== */
+const FB_CONFIG = {
+  apiKey: "AIzaSyD0_Ji35W2rlaqYjYRqAU-sTksZm0CRDaY",
+  projectId: "vas-schedule",
+  storageBucket: "vas-schedule.firebasestorage.app",
+  messagingSenderId: "763095300879",
+  appId: "1:763095300879:web:7d42c00f856ba8fd365c7a"
+};
+firebase.initializeApp(FB_CONFIG);
+const db = firebase.firestore();
+const SCHED_REF = db.collection('vas').doc('schedule');
 
 function setSyncChip(state, text){
   const c = document.getElementById('syncChip');
@@ -1148,101 +1133,48 @@ function setSyncChip(state, text){
   c.className = 'sync-chip ' + (state||'');
   c.textContent = text;
 }
-function b64encodeUtf8(str){ return btoa(unescape(encodeURIComponent(str))); }
-function b64decodeUtf8(b64){ return decodeURIComponent(escape(atob(b64.replace(/\n/g,'')))); }
 
-async function ghRequest(method, url, body){
-  return fetch(url, {
-    method,
-    headers: {
-      'Authorization': 'token ' + getGhToken(),
-      'Accept': 'application/vnd.github+json',
-      ...(body ? {'Content-Type':'application/json'} : {})
-    },
-    body: body ? JSON.stringify(body) : undefined
-  });
+let fbTimer = null;
+function scheduleFbSave(){
+  clearTimeout(fbTimer);
+  setSyncChip('busy','שומר לענן...');
+  fbTimer = setTimeout(fbSaveNow, 1200);
 }
-const ghContentsUrl = () => `https://api.github.com/repos/${GH.owner}/${GH.repo}/contents/${GH.path}`;
-
-async function cloudPull(){
-  if(!getGhToken()) return false;
-  setSyncChip('busy','מושך מהענן...');
+async function fbSaveNow(){
   try{
-    const res = await ghRequest('GET', ghContentsUrl() + '?t=' + Date.now());
-    if(res.status===404){ setSyncChip('ok','מסונכרן ✓'); return false; } // עדיין אין קובץ בענן — יידחף בשמירה הבאה
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const file = await res.json();
-    const data = JSON.parse(b64decodeUtf8(file.content));
-    if(Array.isArray(data.workers)){
-      workers = data.workers; jobs = data.jobs||{}; sites = data.sites||sites; types = data.types||types;
-      Object.values(jobs).forEach(arr=>arr.forEach(j=>{ if(j.type===undefined) j.type=''; }));
-      await sSet(KEYS.workers,workers); await sSet(KEYS.jobs,jobs); await sSet(KEYS.sites,sites); await sSet(KEYS.types,types);
-    }
+    await SCHED_REF.set({
+      version: VERSION,
+      updatedAt: new Date().toISOString(),
+      workers, jobs, sites, types
+    });
+    setSyncChip('ok','מסונכרן ✓');
+  }catch(e){
+    setSyncChip('err','שגיאת שמירה');
+    console.error('fbSave error', e);
+  }
+}
+async function fbLoad(){
+  try{
+    const snap = await SCHED_REF.get();
+    if(!snap.exists) return false;
+    const d = snap.data();
+    if(Array.isArray(d.workers)) workers = d.workers;
+    if(d.jobs) jobs = d.jobs;
+    if(Array.isArray(d.sites) && d.sites.length) sites = d.sites;
+    if(Array.isArray(d.types) && d.types.length) types = d.types;
+    Object.values(jobs).forEach(arr=>arr.forEach(j=>{
+      if(j.type===undefined) j.type='';
+      if(j.start===undefined) j.start='';
+      if(j.end===undefined) j.end='';
+    }));
+    await sSet(KEYS.workers,workers); await sSet(KEYS.jobs,jobs);
+    await sSet(KEYS.sites,sites); await sSet(KEYS.types,types);
     setSyncChip('ok','מסונכרן ✓');
     return true;
   }catch(e){
-    setSyncChip('err','שגיאת סנכרון');
+    setSyncChip('err','לא מחובר לענן');
     return false;
   }
-}
-
-let cloudSaveTimer = null, cloudSaving = false, cloudSavePending = false;
-function scheduleCloudSave(){
-  if(!getGhToken()) return;
-  clearTimeout(cloudSaveTimer);
-  setSyncChip('busy','שומר לענן...');
-  cloudSaveTimer = setTimeout(cloudSaveNow, 1500);
-}
-async function cloudSaveNow(){
-  if(cloudSaving){ cloudSavePending = true; return; }
-  cloudSaving = true;
-  try{
-    let sha;
-    const head = await ghRequest('GET', ghContentsUrl() + '?t=' + Date.now());
-    if(head.ok){ sha = (await head.json()).sha; }
-    const payload = {
-      message: 'עדכון לוז ' + new Date().toLocaleString('he-IL'),
-      content: b64encodeUtf8(JSON.stringify({version:VERSION, updatedAt:new Date().toISOString(), workers, jobs, sites, types}))
-    };
-    if(sha) payload.sha = sha;
-    const res = await ghRequest('PUT', ghContentsUrl(), payload);
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    setSyncChip('ok','מסונכרן ✓');
-  }catch(e){
-    setSyncChip('err','שגיאת סנכרון');
-  }finally{
-    cloudSaving = false;
-    if(cloudSavePending){ cloudSavePending = false; cloudSaveNow(); }
-  }
-}
-
-function openSyncModal(){
-  document.getElementById('ghTokenInput').value = getGhToken();
-  document.getElementById('syncOverlay').classList.add('open');
-}
-function closeSyncModal(){ document.getElementById('syncOverlay').classList.remove('open'); }
-async function saveSyncSettings(){
-  const t = document.getElementById('ghTokenInput').value.trim();
-  if(!t){ toast('חסר טוקן'); return; }
-  setGhToken(t);
-  const res = await ghRequest('GET', `https://api.github.com/repos/${GH.owner}/${GH.repo}`);
-  if(!res.ok){
-    setGhToken('');
-    setSyncChip('err','טוקן לא תקין');
-    toast('הטוקן לא עובד — בדוק הרשאות');
-    return;
-  }
-  toast('מחובר ✓');
-  closeSyncModal();
-  const pulled = await cloudPull();
-  if(!pulled) scheduleCloudSave(); // אין עדיין נתונים בענן — דוחפים את המקומי
-  render();
-}
-function clearSyncSettings(){
-  setGhToken('');
-  setSyncChip('', 'מקומי בלבד');
-  closeSyncModal();
-  toast('הסנכרון נותק');
 }
 
 /* ====== backup ====== */
@@ -1266,7 +1198,7 @@ function importData(ev){
       workers = data.workers; jobs = data.jobs; sites = data.sites || sites; types = data.types || types;
       Object.values(jobs).forEach(arr=>arr.forEach(j=>{ if(j.type===undefined) j.type=''; }));
       await persistWorkers(); await persistJobs(); await persistSites(); await persistTypes();
-      render(); toast('שוחזר בהצלחה ✓');
+      render(); await fbSaveNow(); toast('שוחזר בהצלחה ✓');
     }catch(e){ toast('קובץ לא תקין'); }
     ev.target.value='';
   };
@@ -1292,13 +1224,11 @@ document.addEventListener('keydown', e=>{
 (async function init(){
   await loadAll();
   render();
-  if(memFallback) toast('שים לב: הנתונים נשמרים רק בסשן הנוכחי');
-  if(getGhToken()){
-    const pulled = await cloudPull();
-    if(pulled) render();
-  } else {
-    setSyncChip('', 'מקומי בלבד');
-  }
+  try{
+    const pulled = await fbLoad();
+    if(pulled){ render(); }
+    else { await fbSaveNow(); /* ענן ריק — נדחוף נתונים מקומיים */ }
+  }catch(e){ setSyncChip('err','לא מחובר לענן'); }
 })();
 </script>
 </body>
