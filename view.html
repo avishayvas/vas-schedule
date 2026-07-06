@@ -491,10 +491,18 @@ function renderMonth(filterW){
 
 /* ====== init עם Firebase real-time ====== */
 (function init(){
-  document.getElementById('content').innerHTML = '<div class="msg">טוען לוז...</div>';
+  document.getElementById('content').innerHTML = '<div class="msg" style="padding:30px 20px"><div style="font-size:1.5rem;margin-bottom:12px">⏳</div>טוען לוז...<br><small style="color:#B5AE9C">מתחבר לשרת</small></div>';
+  // timeout אם אין חיבור
+  const timeout = setTimeout(()=>{
+    if(!initialized){
+      document.getElementById('content').innerHTML = '<div class="msg">⚠️ לא ניתן להתחבר<br><small>בדוק חיבור לאינטרנט ורענן</small></div>';
+    }
+  }, 10000);
   SCHED_REF.onSnapshot(snap => {
+    clearTimeout(timeout);
     if(!snap.exists){
-      document.getElementById('content').innerHTML = '<div class="msg">הלוז עדיין ריק.<br>ביקש ממנהל לשבץ עבודות.</div>';
+      document.getElementById('content').innerHTML = '<div class="msg">הלוז עדיין ריק 📋<br><small>ממתין לשיבוצים מהמנהל</small></div>';
+      initialized = true;
       return;
     }
     DATA = snap.data();
@@ -503,11 +511,15 @@ function renderMonth(filterW){
       if(window.innerWidth < 640) setDisplay('list'); else render();
       initialized = true;
     } else {
+      const selBefore = document.getElementById('workerFilter').value;
       renderWorkerFilter();
+      document.getElementById('workerFilter').value = selBefore;
       render();
     }
   }, err => {
-    document.getElementById('content').innerHTML = '<div class="msg">שגיאה בטעינת הלוז.<br>בדוק חיבור לאינטרנט ורענן.</div>';
+    clearTimeout(timeout);
+    document.getElementById('content').innerHTML = '<div class="msg">שגיאת חיבור ⚠️<br><small>רענן את הדף</small></div>';
+    console.error('Firestore error:', err);
   });
 })();
 </script>
