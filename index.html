@@ -441,7 +441,6 @@ let sites = [];
 let types = [];
 let weekStart = getWeekStart(new Date());   // נלקח אוטומטית מתאריך המכשיר
 let editingJob = null;
-let memFallback = false;
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
 
@@ -474,23 +473,40 @@ function weekDates(){
 
 /* ====== storage ======
    בתוך Claude: window.storage (ענן). מחוץ לקלוד (GitHub Pages / קובץ מקומי): localStorage של הדפדפן. */
-const hasCloud = typeof window.storage !== 'undefined';
-async function sGet(key){
-  if(hasCloud){
-    try{ const r = await window.storage.get(key); return r ? JSON.parse(r.value) : null; }
-    catch(e){ return null; }
-  }
-  try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; }
-  catch(e){ return null; }
+/* localStorage — simple cache */
+function lsGet(key){ try{ return JSON.parse(localStorage.getItem(key)); }catch(e){ return null; } }
+function lsSet(key,val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} }
+/* shim — persist functions still call sSet/sGet internally */
+async function sGet(key){ return lsGet(key); }
+async function sSet(key,val){ lsSet(key, val); }
+async function persistWorkers(){ lsSet(KEYS.workers, workers); scheduleFbSave(); }
+async function persistJobs(){ lsSet(KEYS.jobs, jobs); scheduleFbSave(); }
+async function persistSites(){ lsSet(KEYS.sites, sites); scheduleFbSave(); }
+async function persistTypes(){ lsSet(KEYS.types, types); scheduleFbSave(); }
+
+function buildDefaultWorkers(){
+  const arr = [];
+  DEFAULT_EMPLOYEES.forEach(e=>arr.push({id:uid(), name:e.name, role:'employee', title:e.title, phone:''}));
+  DEFAULT_CONTRACTORS.forEach(n=>arr.push({id:uid(), name:n, role:'contractor', title:'', phone:''}));
+  return arr;
 }
-async function sSet(key,val){
-  if(hasCloud){
-    try{ await window.storage.set(key, JSON.stringify(val)); }
-    catch(e){ memFallback = true; }
-    return;
-  }
-  try{ localStorage.setItem(key, JSON.stringify(val)); }
-  catch(e){ memFallback = true; }
+
+async function loadAll(){
+  /* טוען מ-localStorage — גיבוי מהיר לפני Firebase */
+  workers = lsGet(KEYS.workers) || [];
+  jobs    = lsGet(KEYS.jobs)    || {};
+  sites   = lsGet(KEYS.sites)   || [];
+  types   = lsGet(KEYS.types)   || [];
+  /* ברירות מחדל אם אין כלום */
+  if(!workers.length) workers = buildDefaultWorkers();
+  if(!sites.length)   sites   = [...DEFAULT_SITES];
+  if(!types.length)   types   = [...DEFAULT_TYPES];
+  /* תיקון שדות חסרים */
+  Object.values(jobs).forEach(arr=>arr.forEach(j=>{
+    if(j.type===undefined) j.type='';
+    if(j.start===undefined) j.start='';
+    if(j.end===undefined) j.end='';
+  }));
 }
 async function persistWorkers(){ await sSet(KEYS.workers, workers); scheduleFbSave(); }
 async function persistJobs(){ await sSet(KEYS.jobs, jobs); scheduleFbSave(); }
@@ -1222,13 +1238,37 @@ document.addEventListener('keydown', e=>{
 
 /* ====== init ====== */
 (async function init(){
-  await loadAll();
-  render();
+  setSyncChip('busy','מתחבר לענן...');
+  await loadAll();   // טעינה מהירה מ-localStorage
+  render();          // רינדור ראשוני מיידי
+
+  // Firebase — מקור האמת
   try{
-    const pulled = await fbLoad();
-    if(pulled){ render(); }
-    else { await fbSaveNow(); /* ענן ריק — נדחוף נתונים מקומיים */ }
-  }catch(e){ setSyncChip('err','לא מחובר לענן'); }
+    const snap = await SCHED_REF.get();
+    if(snap.exists){
+      const d = snap.data();
+      if(Array.isArray(d.workers) && d.workers.length) workers = d.workers;
+      if(d.jobs) jobs = d.jobs;
+      if(Array.isArray(d.sites) && d.sites.length) sites = d.sites;
+      if(Array.isArray(d.types) && d.types.length) types = d.types;
+      Object.values(jobs).forEach(arr=>arr.forEach(j=>{
+        if(j.type===undefined) j.type='';
+        if(j.start===undefined) j.start='';
+        if(j.end===undefined) j.end='';
+      }));
+      // שמור ב-localStorage כגיבוי מהיר לפתיחה הבאה
+      lsSet(KEYS.workers,workers); lsSet(KEYS.jobs,jobs);
+      lsSet(KEYS.sites,sites); lsSet(KEYS.types,types);
+      render();
+      setSyncChip('ok','מסונכרן ✓');
+    } else {
+      // Firebase ריק — דחוף נתונים מקומיים
+      await fbSaveNow();
+    }
+  }catch(e){
+    setSyncChip('err','לא מחובר לענן');
+    console.error('Firebase init error:', e);
+  }
 })();
 </script>
 </body>
