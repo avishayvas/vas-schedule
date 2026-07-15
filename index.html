@@ -217,11 +217,85 @@
   }
   .toast.show{opacity:1}
 
+  /* ===== VIEW SWITCHER ===== */
+  .view-switch{
+    display:flex;background:rgba(255,255,255,.08);border:1px solid rgba(212,160,23,.4);
+    border-radius:8px;overflow:hidden;
+  }
+  .view-switch button{
+    border-radius:0;background:transparent;color:#EFE8D6;font-size:.82rem;padding:7px 14px;
+  }
+  .view-switch button.active{background:var(--gold);color:#fff}
+  .view-switch button:not(.active):hover{background:rgba(255,255,255,.12)}
+
+  /* ===== STICKY (desktop comfort) ===== */
+  .sched thead th{position:sticky;top:0;z-index:6}
+  .sched th.worker-col{z-index:7}
+  .sched .worker-cell, .sched th.worker-col{
+    position:sticky;inset-inline-start:0;
+  }
+  .sched .worker-cell{background:#FCFAF5;z-index:4}
+
+  /* ===== MONTH VIEW ===== */
+  table.month{
+    border-collapse:separate;border-spacing:0;width:100%;min-width:880px;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    overflow:hidden;table-layout:fixed;
+  }
+  .month th{
+    background:var(--ink);color:#F6F3EC;padding:9px 8px;font-size:.85rem;font-weight:600;
+    border-inline-start:1px solid rgba(255,255,255,.08);
+  }
+  .month td{
+    border-top:1px solid var(--line);border-inline-start:1px solid var(--line);
+    vertical-align:top;padding:5px;height:104px;cursor:pointer;transition:.12s;
+  }
+  .month td:hover{background:#FBF8F0}
+  .month td.other-month{background:#F5F2EA;color:#B8B2A2}
+  .month td.other-month:hover{background:#F0ECE1}
+  .month td.today-col{background:#FDFAF1;box-shadow:inset 0 0 0 2px var(--gold)}
+  .month .mnum{font-weight:700;font-size:.82rem;margin-bottom:3px;display:flex;align-items:center;gap:5px}
+  .month .mnum .badge{
+    font-size:.62rem;font-weight:700;background:var(--gold-soft);color:#6E5510;
+    border-radius:20px;padding:0 7px;
+  }
+  .mchip{
+    border-radius:6px;padding:2px 6px;margin-bottom:3px;font-size:.68rem;line-height:1.3;
+    border:1px solid transparent;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+  }
+  .mchip:hover{filter:brightness(.95)}
+  .mchip .cnt{font-weight:700}
+  .mchip.more{background:none;border:none;color:var(--ink-soft);font-weight:600}
+
+  /* ===== DAY VIEW ===== */
+  table.sched.day-view{min-width:640px}
+  table.sched.day-view td.day-cell{height:auto;min-height:80px}
+  table.sched.day-view .job{font-size:.84rem;padding:7px 10px}
+
+  .task-info{
+    background:var(--gold-soft);border:1px solid #E0C98A;color:#6E5510;
+    border-radius:8px;padding:7px 12px;font-size:.78rem;font-weight:600;margin-bottom:12px;
+  }
+
+  /* ===== THURSDAY BANNER & WEEKLY SEND ===== */
+  .thu-banner{
+    margin:0 22px 12px;padding:10px 16px;border-radius:var(--radius);
+    background:var(--gold-soft);border:1px solid #E0C98A;color:#6E5510;
+    font-size:.88rem;font-weight:600;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  }
+  .thu-banner button{padding:6px 14px;font-size:.8rem}
+  .wrow.sent{background:var(--done-bg);border-color:#BCDFC7}
+  .wrow.sent .winfo b::after{content:' ✓ נשלח';color:var(--done);font-size:.72rem}
+  .wrow.nojobs{opacity:.5}
+  .wa-send-btn{background:var(--wa);color:#fff;font-size:.78rem;padding:6px 12px}
+  .wa-send-btn:hover{background:#178f47}
+
   @media print{
-    header .week-nav button, .toolbar, .add-hint, .wa-btn{display:none !important}
+    header .week-nav button, .toolbar, .add-hint, .wa-btn, .thu-banner{display:none !important}
     body{background:#fff}
     .grid-wrap{padding:0;overflow:visible}
-    table.sched{min-width:0;font-size:.7rem}
+    table.sched,table.month{min-width:0;font-size:.7rem}
+    .view-switch{display:none !important}
     header{padding:8px 12px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     .job,.worker-role,tr.group-row td{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   }
@@ -245,9 +319,14 @@
   </div>
   <div class="today-chip" id="todayChip"></div>
   <div class="week-nav">
-    <button class="btn-ghost" onclick="shiftWeek(1)">◀ הבא</button>
+    <div class="view-switch" id="viewSwitch">
+      <button id="vwDay" onclick="setView('day')">יום</button>
+      <button id="vwWeek" onclick="setView('week')">שבוע</button>
+      <button id="vwMonth" onclick="setView('month')">חודש</button>
+    </div>
+    <button class="btn-ghost" onclick="shiftView(1)">◀ הבא</button>
     <div class="week-label" id="weekLabel"></div>
-    <button class="btn-ghost" onclick="shiftWeek(-1)">הקודם ▶</button>
+    <button class="btn-ghost" onclick="shiftView(-1)">הקודם ▶</button>
     <button class="btn-gold" onclick="goToday()">היום</button>
   </div>
 </header>
@@ -259,11 +338,17 @@
   <select id="siteFilter" onchange="render()" title="סינון לפי אתר"></select>
   <select id="typeFilter" onchange="render()" title="סינון לפי סוג עבודה"></select>
   <button class="btn-light" onclick="window.print()">🖨️ הדפסה</button>
+  <button class="btn-gold" onclick="openWaWeek()">📤 לוז שבועי לעובדים</button>
   <button class="btn-light" onclick="exportData()">⬇️ גיבוי</button>
   <button class="btn-light" onclick="document.getElementById('importFile').click()">⬆️ שחזור</button>
   <span class="sync-chip" id="syncChip">מתחבר לענן...</span>
   <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
   <div class="stats" id="statsBar"></div>
+</div>
+
+<div class="thu-banner" id="thuBanner" style="display:none">
+  🔔 היום יום חמישי — זה הזמן לשלוח לעובדים את הלוז של השבוע הבא
+  <button class="btn-gold" onclick="openWaWeek(1)">📤 שליחה עכשיו</button>
 </div>
 
 <div class="grid-wrap" id="gridWrap"></div>
@@ -272,6 +357,7 @@
 <div class="overlay" id="jobOverlay">
   <div class="modal">
     <h2 id="jobModalTitle">עבודה חדשה</h2>
+    <div class="task-info" id="taskInfo" style="display:none"></div>
     <div class="field">
       <label>אתר / פרויקט *</label>
       <select id="jobSite" onchange="onSiteSelect()"></select>
@@ -310,6 +396,9 @@
           <button type="button" class="mini-btn" onclick="shiftJobDate(7)">◀ שבוע קדימה</button>
           <button type="button" class="mini-btn" onclick="shiftJobDate(-7)">שבוע אחורה ▶</button>
         </div>
+        <label id="taskAllDaysWrap" style="display:none;align-items:center;gap:7px;font-size:.8rem;margin-top:7px;cursor:pointer">
+          <input type="checkbox" id="taskAllDays" style="width:auto"> <span id="taskAllDaysLabel">החל את השינויים על כל ימי המשימה</span>
+        </label>
         <button type="button" class="mini-link" id="rangeToggle" onclick="toggleRange()">＋ שיבוץ לכמה ימים ברצף</button>
         <div id="rangeBox" style="display:none;margin-top:6px;padding:8px 10px;background:#FDFCF9;border:1px solid var(--line);border-radius:8px">
           <label style="display:block;font-size:.78rem;font-weight:600;color:var(--ink-soft);margin-bottom:4px">עד תאריך (כולל) <span id="jobDateEndName" style="font-weight:400;color:var(--gold)"></span></label>
@@ -423,6 +512,33 @@
   </div>
 </div>
 
+<!-- Weekly WhatsApp send modal -->
+<div class="overlay" id="waWeekOverlay">
+  <div class="modal" style="max-width:560px">
+    <h2>📤 שליחת לוז שבועי לעובדים</h2>
+    <div class="field-row">
+      <div class="field">
+        <label>לאיזה שבוע לשלוח?</label>
+        <select id="waWeekSel" onchange="renderWaWeekList()">
+          <option value="0">השבוע הנוכחי</option>
+          <option value="1">השבוע הבא</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>טווח</label>
+        <div id="waWeekRange" style="padding:9px 12px;background:#FDFCF9;border:1px solid var(--line);border-radius:8px;font-size:.9rem;font-weight:600"></div>
+      </div>
+    </div>
+    <p style="font-size:.78rem;color:var(--ink-soft);margin-bottom:10px">
+      לחיצה על 💬 פותחת וואטסאפ עם ההודעה מוכנה — נשאר רק ללחוץ שליחה ולחזור לכאן לעובד הבא. עובד בלי טלפון? 📋 מעתיק את ההודעה.
+    </p>
+    <div class="wlist" id="waWeekList" style="max-height:340px"></div>
+    <div class="modal-actions">
+      <button class="btn-light" onclick="closeWaWeek()">סגירה</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -439,7 +555,9 @@ let workers = [];
 let jobs = {};          // { 'YYYY-MM-DD': [ {id, workerId, site, location, start, end, notes, status} ] }
 let sites = [];
 let types = [];
-let weekStart = getWeekStart(new Date());   // נלקח אוטומטית מתאריך המכשיר
+let anchor = new Date(); anchor.setHours(0,0,0,0);   // התאריך שסביבו מוצגת התצוגה
+let viewMode = localStorage.getItem('vas-schedule:view') || 'week';  // day | week | month
+if(!['day','week','month'].includes(viewMode)) viewMode = 'week';
 let editingJob = null;
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
@@ -468,7 +586,28 @@ function dateKey(d){
 }
 function fmtDay(d){ return d.getDate() + '.' + (d.getMonth()+1); }
 function weekDates(){
-  return Array.from({length:6},(_,i)=>{ const d=new Date(weekStart); d.setDate(d.getDate()+i); return d; });
+  const ws = getWeekStart(anchor);
+  return Array.from({length:6},(_,i)=>{ const d=new Date(ws); d.setDate(d.getDate()+i); return d; });
+}
+const MONTH_NAMES = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+function skipSat(d, dir){ if(d.getDay()===6){ d.setDate(d.getDate() + (dir<0?-1:1)); } return d; }
+function monthWeeks(){
+  const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
+  const last  = new Date(anchor.getFullYear(), anchor.getMonth()+1, 0);
+  const weeks = [];
+  const d = getWeekStart(first);
+  while(d <= last){
+    const week = [];
+    for(let i=0;i<6;i++){ week.push(new Date(d)); d.setDate(d.getDate()+1); }
+    d.setDate(d.getDate()+1); // דילוג על שבת
+    weeks.push(week);
+  }
+  return weeks;
+}
+function visibleDates(){
+  if(viewMode==='day')  return [new Date(anchor)];
+  if(viewMode==='week') return weekDates();
+  return monthWeeks().flat().filter(d=>d.getMonth()===anchor.getMonth());
 }
 
 /* ====== storage ======
@@ -565,12 +704,30 @@ async function loadAll(){
 
 /* ====== render ====== */
 function render(){
+  if(viewMode==='day' && anchor.getDay()===6) skipSat(anchor, 1);
   renderTodayChip();
   renderWeekLabel();
   renderSiteFilter();
   renderTypeFilter();
-  renderGrid();
+  renderViewSwitch();
+  document.getElementById('thuBanner').style.display = (new Date().getDay()===4) ? 'flex' : 'none';
+  if(viewMode==='month') renderMonthGrid();
+  else renderGrid(viewMode==='day' ? [new Date(anchor)] : weekDates());
   renderStats();
+}
+function renderViewSwitch(){
+  ['Day','Week','Month'].forEach(v=>{
+    document.getElementById('vw'+v).classList.toggle('active', viewMode===v.toLowerCase());
+  });
+}
+function setView(mode){
+  viewMode = mode;
+  localStorage.setItem('vas-schedule:view', mode);
+  render();
+}
+function gotoDay(dk){
+  anchor = new Date(dk+'T00:00');
+  setView('day');
 }
 function renderTodayChip(){
   const now = new Date();
@@ -579,10 +736,16 @@ function renderTodayChip(){
     'היום: יום ' + dayName + ', ' + now.getDate()+'.'+(now.getMonth()+1)+'.'+now.getFullYear();
 }
 function renderWeekLabel(){
-  const ds = weekDates();
-  const last = ds[ds.length-1];
-  document.getElementById('weekLabel').textContent =
-    'שבוע ' + fmtDay(ds[0]) + ' – ' + fmtDay(last) + '.' + last.getFullYear();
+  const el = document.getElementById('weekLabel');
+  if(viewMode==='day'){
+    el.textContent = 'יום ' + FULL_DAY_NAMES[anchor.getDay()] + ' ' + fmtDay(anchor) + '.' + anchor.getFullYear();
+  } else if(viewMode==='month'){
+    el.textContent = MONTH_NAMES[anchor.getMonth()] + ' ' + anchor.getFullYear();
+  } else {
+    const ds = weekDates();
+    const last = ds[ds.length-1];
+    el.textContent = 'שבוע ' + fmtDay(ds[0]) + ' – ' + fmtDay(last) + '.' + last.getFullYear();
+  }
 }
 function renderSiteFilter(){
   const sel = document.getElementById('siteFilter');
@@ -603,7 +766,7 @@ function overlaps(a,b){
   if(!a.start || !a.end || !b.start || !b.end) return false;
   return a.start < b.end && b.start < a.end;
 }
-function renderGrid(){
+function renderGrid(ds){
   const wrap = document.getElementById('gridWrap');
   if(workers.length === 0){
     wrap.innerHTML = `<div class="empty-state">
@@ -613,12 +776,12 @@ function renderGrid(){
     </div>`;
     return;
   }
-  const ds = weekDates();
+  ds = ds || weekDates();
   const todayKey = dateKey(new Date());
   const filterSite = document.getElementById('siteFilter').value;
   const filterType = document.getElementById('typeFilter').value;
 
-  let html = '<table class="sched"><thead><tr><th class="worker-col">עובד</th>';
+  let html = `<table class="sched${ds.length===1?' day-view':''}"><thead><tr><th class="worker-col">עובד</th>`;
   ds.forEach(d=>{
     const isToday = dateKey(d)===todayKey;
     html += `<th class="day-h ${isToday?'today-col':''}" onclick="openMoveDay('${dateKey(d)}')" title="לחיצה — העברת כל העבודות של היום לתאריך אחר">${DAY_NAMES[d.getDay()]}<span class="dnum">${fmtDay(d)}</span></th>`;
@@ -628,7 +791,7 @@ function renderGrid(){
   ROLE_ORDER.forEach(role=>{
     const group = workers.filter(w=>w.role===role);
     if(group.length===0) return;
-    html += `<tr class="group-row"><td colspan="7">${ROLE_GROUP[role]} (${group.length})</td></tr>`;
+    html += `<tr class="group-row"><td colspan="${ds.length+1}">${ROLE_GROUP[role]} (${group.length})</td></tr>`;
     group.forEach(w=>{
       html += `<tr><td class="worker-cell">
         <div class="worker-top">
@@ -653,6 +816,7 @@ function renderGrid(){
             ${timeStr?`<span class="jtime">${timeStr}</span> `:''}
             <b>${esc(j.site)}</b>
             ${j.type?`<span class="jtag">${esc(j.type)}</span>`:''}
+            ${j.taskId && taskJobsOn(j.taskId,dk).length>1?`<span class="jtag" title="משימה משותפת">🔗 ${taskJobsOn(j.taskId,dk).length}</span>`:''}
             ${j.location?`<span class="loc">${esc(j.location)}</span>`:''}
           </div>`;
         });
@@ -664,8 +828,51 @@ function renderGrid(){
   html += '</tbody></table>';
   wrap.innerHTML = html;
 }
+function renderMonthGrid(){
+  const wrap = document.getElementById('gridWrap');
+  const todayKey = dateKey(new Date());
+  const filterSite = document.getElementById('siteFilter').value;
+  const filterType = document.getElementById('typeFilter').value;
+  const wname = id => { const w = workers.find(x=>x.id===id); return w ? w.name : '?'; };
+
+  let html = '<table class="month"><thead><tr>' +
+    DAY_NAMES.map(n=>`<th>${n}</th>`).join('') + '</tr></thead><tbody>';
+
+  monthWeeks().forEach(week=>{
+    html += '<tr>';
+    week.forEach(d=>{
+      const dk = dateKey(d);
+      const inMonth = d.getMonth()===anchor.getMonth();
+      const isToday = dk===todayKey;
+      let dayJobs = (jobs[dk]||[]).filter(j=>j.status!=='cancel');
+      if(filterSite) dayJobs = dayJobs.filter(j=>j.site===filterSite);
+      if(filterType) dayJobs = dayJobs.filter(j=>j.type===filterType);
+      // קיבוץ למשימות: לפי taskId, ובלעדיו — לפי אתר+שעה
+      const groups = {};
+      dayJobs.forEach(j=>{
+        const key = j.taskId || (j.site+'|'+(j.start||'')+'|'+(j.type||''));
+        (groups[key] = groups[key]||[]).push(j);
+      });
+      const entries = Object.values(groups);
+      html += `<td class="${inMonth?'':'other-month'} ${isToday?'today-col':''}" onclick="gotoDay('${dk}')" title="לחיצה — מעבר לתצוגת יום">
+        <div class="mnum">${d.getDate()}${dayJobs.length?`<span class="badge">${dayJobs.length}</span>`:''}</div>`;
+      entries.slice(0,3).forEach(g=>{
+        const j = g[0];
+        const names = g.length<=2 ? g.map(x=>wname(x.workerId)).join(', ') : g.length+' עובדים';
+        html += `<div class="mchip job st-${j.status}" onclick="event.stopPropagation();openJobModal('${dk}','${j.id}')" title="${esc(j.site)} — ${esc(g.map(x=>wname(x.workerId)).join(', '))}">
+          <b>${esc(j.site)}</b> <span class="cnt">(${esc(names)})</span></div>`;
+      });
+      if(entries.length>3) html += `<div class="mchip more">＋ עוד ${entries.length-3} משימות...</div>`;
+      html += '</td>';
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
 function renderStats(){
-  const ds = weekDates().map(dateKey);
+  const ds = visibleDates().map(dateKey);
+  const scopeName = viewMode==='day' ? 'היום' : viewMode==='month' ? 'החודש' : 'השבוע';
   const filterSite = document.getElementById('siteFilter').value;
   const filterType = document.getElementById('typeFilter').value;
   let total=0, active=0, done=0;
@@ -678,7 +885,7 @@ function renderStats(){
     if(j.status==='done') done++;
   }));
   document.getElementById('statsBar').innerHTML = `
-    <div class="stat"><b>${total}</b> עבודות השבוע</div>
+    <div class="stat"><b>${total}</b> עבודות ${scopeName}</div>
     <div class="stat"><b>${active}</b> בביצוע</div>
     <div class="stat"><b>${done}</b> הושלמו</div>
     <div class="stat"><b>${workers.length}</b> עובדים</div>`;
@@ -686,8 +893,14 @@ function renderStats(){
 function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 /* ====== navigation ====== */
-function shiftWeek(n){ weekStart.setDate(weekStart.getDate()+n*7); render(); }
-function goToday(){ weekStart = getWeekStart(new Date()); render(); }
+function shiftView(n){
+  if(viewMode==='day'){ anchor.setDate(anchor.getDate()+n); skipSat(anchor, n); }
+  else if(viewMode==='month'){ anchor = new Date(anchor.getFullYear(), anchor.getMonth()+n, 1); }
+  else { anchor.setDate(anchor.getDate()+n*7); }
+  render();
+}
+function shiftWeek(n){ shiftView(n); }
+function goToday(){ anchor = new Date(); anchor.setHours(0,0,0,0); render(); }
 
 /* ====== job modal ====== */
 function cellClick(e, dk, workerId){ openJobModal(dk, null, workerId); }
@@ -736,7 +949,14 @@ function setMultiMode(on){
   document.getElementById('multiToggle').textContent = on ? '− חזרה לעובד יחיד' : '＋ שיבוץ לכמה עובדים בבת אחת';
   if(on) renderMultiWorkerBox();
 }
-function toggleMultiWorker(){ setMultiMode(!multiMode); }
+function toggleMultiWorker(){
+  setMultiMode(!multiMode);
+  // בעריכת עבודה קיימת — סימון מראש של העובד הנוכחי כשעוברים למצב משימה
+  if(multiMode && editingJob){
+    const j = (jobs[editingJob.dateKey]||[]).find(x=>x.id===editingJob.id);
+    if(j) checkMultiWorkers(taskWorkerIds(j, editingJob.dateKey));
+  }
+}
 function renderMultiWorkerBox(){
   const box = document.getElementById('multiWorkerBox');
   box.innerHTML = '<button type="button" class="multi-all" onclick="multiSelectAll(this)">סמן את כולם</button>' +
@@ -746,6 +966,18 @@ function renderMultiWorkerBox(){
       return `<div class="grp">${ROLE_GROUP[role]}</div>` + grp.map(w=>
         `<label><input type="checkbox" value="${w.id}"> ${esc(w.name)}${w.title?' — '+esc(w.title):''}</label>`).join('');
     }).join('');
+}
+function checkMultiWorkers(ids){
+  document.querySelectorAll('#multiWorkerBox input[type=checkbox]').forEach(b=>{
+    b.checked = ids.includes(b.value);
+  });
+}
+/* ====== task helpers ====== */
+function taskJobsOn(taskId, dk){ return (jobs[dk]||[]).filter(j=>j.taskId===taskId); }
+function taskDates(taskId){ return Object.keys(jobs).filter(dk=>jobs[dk].some(j=>j.taskId===taskId)).sort(); }
+function taskWorkerIds(j, dk){
+  if(!j.taskId) return [j.workerId];
+  return taskJobsOn(j.taskId, dk).map(x=>x.workerId);
 }
 function multiSelectAll(btn){
   const boxes = [...document.querySelectorAll('#multiWorkerBox input[type=checkbox]')];
@@ -793,13 +1025,35 @@ function openJobModal(dk, jobId, presetWorker){
   setMultiMode(false);
   setRangeMode(false);
   document.getElementById('jobDateEnd').value='';
-  document.getElementById('multiToggle').style.display = jobId ? 'none' : 'inline';
+  document.getElementById('multiToggle').style.display = 'inline';
+  document.getElementById('multiToggle').textContent = jobId ? '＋ עריכת העובדים במשימה (הוספה / הסרה)' : '＋ שיבוץ לכמה עובדים בבת אחת';
   document.getElementById('rangeToggle').style.display = jobId ? 'none' : 'inline';
+  document.getElementById('taskInfo').style.display = 'none';
+  document.getElementById('taskAllDaysWrap').style.display = 'none';
+  document.getElementById('taskAllDays').checked = false;
 
   if(jobId){
     const j = (jobs[dk]||[]).find(x=>x.id===jobId);
     if(!j) return;
     document.getElementById('jobModalTitle').textContent = 'עריכת עבודה';
+    // משימה משותפת — מציגים מיד את כל העובדים עם וי
+    const twIds = taskWorkerIds(j, dk);
+    const tDates = j.taskId ? taskDates(j.taskId) : [dk];
+    if(twIds.length > 1){
+      setMultiMode(true);
+      checkMultiWorkers(twIds);
+      document.getElementById('multiToggle').style.display = 'none';
+      const info = document.getElementById('taskInfo');
+      info.style.display = 'block';
+      info.textContent = '🔗 משימה משותפת — ' + twIds.length + ' עובדים ביום זה' +
+        (tDates.length>1 ? ' • ' + tDates.length + ' ימים' : '') +
+        '. סימון או הסרת וי מעדכן את כולם בבת אחת.';
+    }
+    if(j.taskId && tDates.length > 1){
+      document.getElementById('taskAllDaysWrap').style.display = 'flex';
+      document.getElementById('taskAllDaysLabel').textContent =
+        'החל את השינויים על כל ימי המשימה (' + tDates.length + ' ימים)';
+    }
     fillSiteSelect(j.site);
     fillTypeSelect(j.type||'');
     document.getElementById('jobLocation').value = j.location||'';
@@ -865,18 +1119,70 @@ async function saveJob(){
   if(!newDk){ toast('חסר תאריך'); return; }
 
   if(editingJob){
-    const arr = jobs[editingJob.dateKey]||[];
-    const idx = arr.findIndex(j=>j.id===editingJob.id);
-    if(idx>-1){
-      const old = arr[idx];
+    const srcDk = editingJob.dateKey;
+    const arr = jobs[srcDk]||[];
+    const j = arr.find(x=>x.id===editingJob.id);
+    if(!j){ closeJobModal(); return; }
+
+    if(multiMode){
+      // ===== עריכת משימה: סנכרון עובדים + עדכון פרטים =====
+      const checked = [...document.querySelectorAll('#multiWorkerBox input:checked')].map(i=>i.value);
+      if(checked.length===0){ toast('סמן לפחות עובד אחד'); return; }
+      if(!j.taskId){ j.taskId = uid(); }
+      const taskId = j.taskId;
+      const applyAll = document.getElementById('taskAllDays').checked;
+      if(applyAll && newDk !== srcDk){
+        toast('שינוי תאריך אפשרי רק ליום בודד — בטל את "כל ימי המשימה"'); return;
+      }
+      const scopeDates = applyAll ? taskDates(taskId) : [srcDk];
+      let touched = 0;
+      scopeDates.forEach(dk0=>{
+        jobs[dk0] = jobs[dk0]||[];
+        // הסרת עובדים שהוסר להם הסימון
+        jobs[dk0] = jobs[dk0].filter(x=> !(x.taskId===taskId && !checked.includes(x.workerId)));
+        // עדכון פרטים לקיימים
+        const existing = jobs[dk0].filter(x=>x.taskId===taskId);
+        existing.forEach(x=>{ Object.assign(x, data); touched++; });
+        // הוספת עובדים חדשים שסומנו
+        const have = new Set(existing.map(x=>x.workerId));
+        checked.forEach(wid=>{
+          if(!have.has(wid)){ jobs[dk0].push({id:uid(), taskId, ...data, workerId:wid}); touched++; }
+        });
+        // העברת תאריך (יום בודד בלבד)
+        if(dk0===srcDk && newDk!==srcDk){
+          const moving = jobs[dk0].filter(x=>x.taskId===taskId);
+          jobs[dk0] = jobs[dk0].filter(x=>x.taskId!==taskId);
+          jobs[newDk] = (jobs[newDk]||[]).concat(moving);
+        }
+        if(jobs[dk0] && jobs[dk0].length===0) delete jobs[dk0];
+      });
+      await persistJobs();
+      closeJobModal();
+      anchor = new Date(newDk+'T00:00');
+      render();
+      toast(applyAll ? 'המשימה עודכנה בכל הימים ✓' : 'המשימה עודכנה ✓ ('+checked.length+' עובדים)');
+      return;
+    }
+
+    // ===== עריכת עובד יחיד =====
+    const applyAll = document.getElementById('taskAllDays').checked;
+    if(applyAll && j.taskId){
+      if(newDk !== srcDk){ toast('שינוי תאריך אפשרי רק ליום בודד — בטל את "כל ימי המשימה"'); return; }
+      // עדכון פרטי העבודה של אותו עובד בכל ימי המשימה
+      taskDates(j.taskId).forEach(dk0=>{
+        (jobs[dk0]||[]).filter(x=>x.taskId===j.taskId && x.workerId===j.workerId)
+          .forEach(x=>Object.assign(x, data, {workerId: document.getElementById('jobWorker').value}));
+      });
+    } else {
+      const idx = arr.findIndex(x=>x.id===editingJob.id);
       arr.splice(idx,1);
-      if(arr.length===0) delete jobs[editingJob.dateKey];
+      if(arr.length===0) delete jobs[srcDk];
       jobs[newDk] = jobs[newDk]||[];
-      jobs[newDk].push({...old, ...data, workerId: document.getElementById('jobWorker').value});
+      jobs[newDk].push({...j, ...data, workerId: document.getElementById('jobWorker').value});
     }
     await persistJobs();
     closeJobModal();
-    weekStart = getWeekStart(new Date(newDk+'T00:00'));
+    anchor = new Date(newDk+'T00:00');
     render(); toast('נשמר ✓');
     return;
   }
@@ -906,13 +1212,14 @@ async function saveJob(){
     if(dks.length===0){ toast('אין ימי עבודה בטווח שנבחר'); return; }
     if(dks.length>31){ toast('הטווח ארוך מדי (מקסימום חודש)'); return; }
   }
+  const newTaskId = (workerIds.length>1 || dks.length>1) ? uid() : null;
   dks.forEach(dk2=>{
     jobs[dk2] = jobs[dk2]||[];
-    workerIds.forEach(wid=>jobs[dk2].push({id:uid(), ...data, workerId:wid}));
+    workerIds.forEach(wid=>jobs[dk2].push({id:uid(), ...data, ...(newTaskId?{taskId:newTaskId}:{}), workerId:wid}));
   });
   await persistJobs();
   closeJobModal();
-  weekStart = getWeekStart(new Date(newDk+'T00:00'));
+  anchor = new Date(newDk+'T00:00');
   render();
   const total = dks.length * workerIds.length;
   toast(total>1 ? 'נשמרו '+total+' שיבוצים ✓' : 'נשמר ✓');
@@ -920,8 +1227,20 @@ async function saveJob(){
 async function deleteJob(){
   if(!editingJob) return;
   const arr = jobs[editingJob.dateKey]||[];
-  const idx = arr.findIndex(j=>j.id===editingJob.id);
-  if(idx>-1){ arr.splice(idx,1); if(arr.length===0) delete jobs[editingJob.dateKey]; }
+  const j = arr.find(x=>x.id===editingJob.id);
+  if(!j) return;
+  if(multiMode && j.taskId && taskJobsOn(j.taskId, editingJob.dateKey).length > 1){
+    const applyAll = document.getElementById('taskAllDays').checked;
+    const scope = applyAll ? taskDates(j.taskId) : [editingJob.dateKey];
+    if(!confirm('למחוק את המשימה כולה' + (applyAll ? ' בכל ' + scope.length + ' הימים' : ' ביום זה') + '?\nכל שיבוצי העובדים במשימה יימחקו.')) return;
+    scope.forEach(dk0=>{
+      jobs[dk0] = (jobs[dk0]||[]).filter(x=>x.taskId!==j.taskId);
+      if(jobs[dk0].length===0) delete jobs[dk0];
+    });
+  } else {
+    const idx = arr.findIndex(x=>x.id===editingJob.id);
+    if(idx>-1){ arr.splice(idx,1); if(arr.length===0) delete jobs[editingJob.dateKey]; }
+  }
   await persistJobs();
   closeJobModal(); render(); toast('נמחק');
 }
@@ -970,23 +1289,18 @@ async function moveDayDo(){
   delete jobs[moveDaySrc];
   await persistJobs();
   closeMoveDay();
-  weekStart = getWeekStart(new Date(target+'T00:00'));
+  anchor = new Date(target+'T00:00');
   render();
   toast(n + ' עבודות הועברו ✓');
 }
 
 /* ====== WhatsApp ====== */
-function sendWeekWA(workerId){
-  const w = workers.find(x=>x.id===workerId);
-  if(!w || !w.phone){ toast('אין מספר טלפון לעובד הזה'); return; }
-  const digits = w.phone.replace(/\D/g,'');
-  const intl = digits.startsWith('0') ? '972'+digits.slice(1) : digits;
-  const ds = weekDates();
+function buildWeekMsg(w, ds){
   let lines = ['לוז שבועי – ' + w.name, ''];
   let count = 0;
   ds.forEach(d=>{
     const dk = dateKey(d);
-    const dayJobs = (jobs[dk]||[]).filter(j=>j.workerId===workerId && j.status!=='cancel').sort(jobSort);
+    const dayJobs = (jobs[dk]||[]).filter(j=>j.workerId===w.id && j.status!=='cancel').sort(jobSort);
     if(dayJobs.length===0) return;
     lines.push('📅 יום ' + DAY_NAMES[d.getDay()] + ' ' + fmtDay(d) + ':');
     dayJobs.forEach(j=>{
@@ -996,9 +1310,81 @@ function sendWeekWA(workerId){
     });
     lines.push('');
   });
-  if(count===0){ toast('אין עבודות משובצות לעובד הזה השבוע'); return; }
   lines.push('בהצלחה! 💪 VAS Security');
-  window.open('https://wa.me/' + intl + '?text=' + encodeURIComponent(lines.join('\n')), '_blank');
+  return { text: lines.join('\n'), count };
+}
+function waPhoneIntl(phone){
+  const digits = (phone||'').replace(/\D/g,'');
+  if(!digits) return null;
+  return digits.startsWith('0') ? '972'+digits.slice(1) : digits;
+}
+function sendWeekWA(workerId){
+  const w = workers.find(x=>x.id===workerId);
+  if(!w || !w.phone){ toast('אין מספר טלפון לעובד הזה'); return; }
+  const msg = buildWeekMsg(w, weekDates());
+  if(msg.count===0){ toast('אין עבודות משובצות לעובד הזה השבוע'); return; }
+  window.open('https://wa.me/' + waPhoneIntl(w.phone) + '?text=' + encodeURIComponent(msg.text), '_blank');
+}
+
+/* ====== weekly send modal ====== */
+let waSent = {};   // סימון "נשלח" — לפי שבוע+עובד, נשמר מקומית במכשיר
+function lsWaSent(){ return lsGet('vas-schedule:wa-sent') || {}; }
+function waWeekDs(){
+  const off = +document.getElementById('waWeekSel').value;
+  const ws = getWeekStart(new Date());
+  ws.setDate(ws.getDate() + off*7);
+  return Array.from({length:6},(_,i)=>{ const d=new Date(ws); d.setDate(d.getDate()+i); return d; });
+}
+function openWaWeek(presetNext){
+  // ביום חמישי ואילך — ברירת המחדל היא השבוע הבא
+  const dow = new Date().getDay();
+  document.getElementById('waWeekSel').value = (presetNext===1 || dow>=4) ? '1' : '0';
+  waSent = lsWaSent();
+  renderWaWeekList();
+  document.getElementById('waWeekOverlay').classList.add('open');
+}
+function closeWaWeek(){ document.getElementById('waWeekOverlay').classList.remove('open'); }
+function waKey(ds, wid){ return dateKey(ds[0]) + ':' + wid; }
+function renderWaWeekList(){
+  const ds = waWeekDs();
+  const last = ds[ds.length-1];
+  document.getElementById('waWeekRange').textContent = fmtDay(ds[0]) + ' – ' + fmtDay(last) + '.' + last.getFullYear();
+  const el = document.getElementById('waWeekList');
+  el.innerHTML = ROLE_ORDER.flatMap(role=>workers.filter(w=>w.role===role)).map(w=>{
+    const msg = buildWeekMsg(w, ds);
+    const sent = !!waSent[waKey(ds, w.id)];
+    if(msg.count===0){
+      return `<div class="wrow nojobs">
+        <span class="worker-role role-${w.role}">${ROLE_NAMES[w.role]}</span>
+        <div class="winfo"><b>${esc(w.name)}</b><span>אין שיבוצים בשבוע זה</span></div>
+      </div>`;
+    }
+    return `<div class="wrow${sent?' sent':''}" id="waRow-${w.id}">
+      <span class="worker-role role-${w.role}">${ROLE_NAMES[w.role]}</span>
+      <div class="winfo"><b>${esc(w.name)}</b><span>${msg.count} שיבוצים${w.phone ? '' : ' • ⚠️ אין טלפון'}</span></div>
+      ${w.phone ? `<button class="wa-send-btn" onclick="waSendTo('${w.id}')">💬 שליחה</button>` : ''}
+      <button class="mini-btn" title="העתקת ההודעה" onclick="waCopyMsg('${w.id}')">📋</button>
+    </div>`;
+  }).join('') || '<p style="text-align:center;color:var(--ink-soft);padding:14px">אין עובדים</p>';
+}
+function waMarkSent(wid){
+  const ds = waWeekDs();
+  waSent[waKey(ds, wid)] = true;
+  lsSet('vas-schedule:wa-sent', waSent);
+  const row = document.getElementById('waRow-'+wid);
+  if(row) row.classList.add('sent');
+}
+function waSendTo(wid){
+  const w = workers.find(x=>x.id===wid); if(!w) return;
+  const msg = buildWeekMsg(w, waWeekDs());
+  window.open('https://wa.me/' + waPhoneIntl(w.phone) + '?text=' + encodeURIComponent(msg.text), '_blank');
+  waMarkSent(wid);
+}
+async function waCopyMsg(wid){
+  const w = workers.find(x=>x.id===wid); if(!w) return;
+  const msg = buildWeekMsg(w, waWeekDs());
+  try{ await navigator.clipboard.writeText(msg.text); toast('ההודעה הועתקה — אפשר להדביק בכל מקום'); waMarkSent(wid); }
+  catch(e){ toast('ההעתקה נכשלה'); }
 }
 
 /* ====== workers ====== */
