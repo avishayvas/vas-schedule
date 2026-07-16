@@ -300,11 +300,42 @@
     .job,.worker-role,tr.group-row td{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   }
   @media (max-width:640px){
-    .week-label{min-width:0;font-size:.8rem}
-    header{padding:10px 14px;gap:10px}
-    .toolbar{padding:10px 14px}
-    .grid-wrap{padding:0 10px 20px}
+    header{padding:10px 12px;gap:8px}
+    .brand h1{font-size:1.05rem}
+    .brand small{font-size:.58rem;letter-spacing:1.2px}
     .today-chip{display:none}
+    /* שורת תצוגה מלאה, ניווט מתחתיה */
+    .week-nav{width:100%;gap:6px}
+    .view-switch{order:-1;width:100%}
+    .view-switch button{flex:1;padding:9px 0;font-size:.88rem}
+    .week-nav > .btn-ghost{padding:8px 8px;font-size:.74rem;white-space:nowrap}
+    .week-nav > .btn-gold{padding:8px 10px;font-size:.74rem}
+    .week-label{flex:1;min-width:0;font-size:.74rem;padding:8px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    /* סרגל כלים — פס אחד נגלל הצידה במקום ערימת שורות */
+    .toolbar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:10px 12px;gap:8px;scrollbar-width:none}
+    .toolbar::-webkit-scrollbar{display:none}
+    .toolbar button, .toolbar select{flex:0 0 auto;font-size:.78rem;padding:7px 11px;white-space:nowrap}
+    .stats{margin-inline-start:0;flex-wrap:nowrap}
+    .stat{padding:5px 10px;font-size:.7rem;white-space:nowrap;flex:0 0 auto}
+    .stat b{font-size:.95rem}
+    .sync-chip{flex:0 0 auto;white-space:nowrap}
+    .thu-banner{margin:0 10px 10px;padding:9px 12px;font-size:.78rem;gap:8px}
+    .grid-wrap{padding:0 8px 16px}
+    /* שבוע — עמודת עובד צרה יותר */
+    .sched th.worker-col{width:96px;padding-inline-start:8px;font-size:.76rem}
+    .sched .worker-cell{padding:5px 6px}
+    .sched td{padding:3px}
+    .job{font-size:.68rem;padding:4px 6px}
+    /* יום — נכנס במסך בלי גלילה הצידה */
+    table.sched.day-view{min-width:0}
+    table.sched.day-view .job{font-size:.8rem}
+    /* חודש — נכנס במסך: מספר + כמות עבודות, בלי טקסט חתוך */
+    table.month{min-width:0}
+    .month th{padding:7px 2px;font-size:.7rem}
+    .month td{height:58px;padding:3px}
+    .month .mnum{font-size:.74rem;flex-direction:column;align-items:flex-start;gap:2px}
+    .mchip{display:none}
+    .mchip.more{display:none}
   }
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
