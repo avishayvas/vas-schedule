@@ -560,8 +560,14 @@
         <div id="waWeekRange" style="padding:9px 12px;background:#FDFCF9;border:1px solid var(--line);border-radius:8px;font-size:.9rem;font-weight:600"></div>
       </div>
     </div>
+    <div style="background:var(--gold-soft);border:1px solid #E0C98A;border-radius:10px;padding:10px 12px;margin-bottom:12px">
+      <div style="font-weight:700;font-size:.84rem;margin-bottom:4px">📢 שליחה מרוכזת לקבוצת החברה</div>
+      <div style="font-size:.75rem;color:#6E5510;margin-bottom:8px">הודעה אחת עם הלוז של כולם, מסודרת לפי ימים. וואטסאפ ייפתח עם מסך בחירה — בוחרים את הקבוצה ושולחים.</div>
+      <button class="wa-send-btn" onclick="waGroupSend()">💬 פתיחה בוואטסאפ</button>
+      <button class="mini-btn" style="margin-inline-start:6px" title="העתקת ההודעה" onclick="waGroupCopy()">📋 העתקה</button>
+    </div>
     <p style="font-size:.78rem;color:var(--ink-soft);margin-bottom:10px">
-      לחיצה על 💬 פותחת וואטסאפ עם ההודעה מוכנה — נשאר רק ללחוץ שליחה ולחזור לכאן לעובד הבא. עובד בלי טלפון? 📋 מעתיק את ההודעה.
+      או פרטני — לחיצה על 💬 פותחת וואטסאפ עם ההודעה מוכנה — נשאר רק ללחוץ שליחה ולחזור לכאן לעובד הבא. עובד בלי טלפון? 📋 מעתיק את ההודעה.
     </p>
     <div class="wlist" id="waWeekList" style="max-height:340px"></div>
     <div class="modal-actions">
@@ -1355,6 +1361,45 @@ function sendWeekWA(workerId){
   const msg = buildWeekMsg(w, weekDates());
   if(msg.count===0){ toast('אין עבודות משובצות לעובד הזה השבוע'); return; }
   window.open('https://wa.me/' + waPhoneIntl(w.phone) + '?text=' + encodeURIComponent(msg.text), '_blank');
+}
+
+/* ====== הודעה מרוכזת לקבוצה ====== */
+function buildGroupWeekMsg(ds){
+  const wname = id => { const w = workers.find(x=>x.id===id); return w ? w.name : '?'; };
+  const last = ds[ds.length-1];
+  let lines = ['📋 לוז שבועי — VAS Security', fmtDay(ds[0]) + ' – ' + fmtDay(last) + '.' + last.getFullYear(), ''];
+  let count = 0;
+  ds.forEach(d=>{
+    const dk = dateKey(d);
+    const dayJobs = (jobs[dk]||[]).filter(j=>j.status!=='cancel').sort(jobSort);
+    if(!dayJobs.length) return;
+    lines.push('📅 יום ' + DAY_NAMES[d.getDay()] + ' ' + fmtDay(d) + ':');
+    const groups = {};
+    dayJobs.forEach(j=>{
+      const key = j.taskId || (j.site+'|'+(j.start||'')+'|'+(j.type||'')+'|'+j.id);
+      (groups[key] = groups[key]||[]).push(j);
+    });
+    Object.values(groups).forEach(g=>{
+      const j = g[0];
+      const t = j.start ? (j.start + (j.end?'-'+j.end:'') + ' ') : '';
+      lines.push('• ' + t + j.site + (j.type?' ['+j.type+']':'') + ' — ' + g.map(x=>wname(x.workerId)).join(', ') + (j.location?' ('+j.location+')':''));
+      count++;
+    });
+    lines.push('');
+  });
+  lines.push('בהצלחה! 💪');
+  return { text: lines.join('\n'), count };
+}
+function waGroupSend(){
+  const msg = buildGroupWeekMsg(waWeekDs());
+  if(!msg.count){ toast('אין שיבוצים בשבוע שנבחר'); return; }
+  window.open('https://wa.me/?text=' + encodeURIComponent(msg.text), '_blank');
+}
+async function waGroupCopy(){
+  const msg = buildGroupWeekMsg(waWeekDs());
+  if(!msg.count){ toast('אין שיבוצים בשבוע שנבחר'); return; }
+  try{ await navigator.clipboard.writeText(msg.text); toast('ההודעה הועתקה — הדבק בקבוצה'); }
+  catch(e){ toast('ההעתקה נכשלה'); }
 }
 
 /* ====== weekly send modal ====== */
