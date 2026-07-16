@@ -1376,13 +1376,13 @@ function buildGroupWeekMsg(ds){
     lines.push('📅 יום ' + DAY_NAMES[d.getDay()] + ' ' + fmtDay(d) + ':');
     const groups = {};
     dayJobs.forEach(j=>{
-      const key = j.taskId || (j.site+'|'+(j.start||'')+'|'+(j.type||'')+'|'+j.id);
+      const key = j.taskId || [j.site, j.start||'', j.end||'', j.type||'', j.location||'', j.notes||''].join('|');
       (groups[key] = groups[key]||[]).push(j);
     });
     Object.values(groups).forEach(g=>{
       const j = g[0];
       const t = j.start ? (j.start + (j.end?'-'+j.end:'') + ' ') : '';
-      lines.push('• ' + t + j.site + (j.type?' ['+j.type+']':'') + ' — ' + g.map(x=>wname(x.workerId)).join(', ') + (j.location?' ('+j.location+')':''));
+      lines.push('• ' + t + j.site + (j.type?' ['+j.type+']':'') + ' — ' + g.map(x=>wname(x.workerId)).join(', ') + (j.location?' ('+j.location+')':'') + (j.notes && !j.location?' ('+j.notes+')':''));
       count++;
     });
     lines.push('');
