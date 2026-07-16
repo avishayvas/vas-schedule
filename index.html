@@ -1623,6 +1623,48 @@ document.addEventListener('keydown', e=>{
 });
 
 /* ====== init ====== */
+/* ====== ייבוא חד-פעמי של רשימות אתרים (מופעל עם ?import=maxstock בכתובת) ====== */
+const IMPORT_LISTS = {
+  maxstock: [
+    'ביג מקס חיפה','מיקה מקס בני ברק','מקס אילת','מקס אור עקיבא','מקס באר שבע',
+    'מקס אשדוד','מקס אשקלון','מקס בארות יצחק','מקס בית שמש','מקס בת ים',
+    'מקס גדרה','מקס ירושלים','מקס דימונה','מקס חדרה','מקס חולון',
+    'מקס טבריה','מקס יבנה','מקס כפר סבא','מקס כרמיאל','מקס מודיעין',
+    'מקס מישור אדומים','מקס נהריה','מקס נוף הגליל','מקס נשר','מקס נתיבות',
+    'מקס נתניה','מקס קרית אתא','מקס סטוק קיסריה','מקס עפולה','מקס פולג',
+    'מקס פתח תקווה','מקס קרית אליעזר','מקס קרית גת','מקס קרית ים','מקס ראשון לציון',
+    'מקס רחובות','מקס רמלה','מקס רעננה','מקס שדרות','מקס שער הכרמל',
+    'מקס תלפיות ירושלים','מקס תל חנן'
+  ]
+};
+function normSiteName(s){
+  return (s||'')
+    .replace(/בע["״']?מ/g,'')
+    .replace(/["'״׳.\-–,()]/g,' ')
+    .replace(/\b20\d\d\b/g,'')
+    .replace(/מקס\s+סטוק/g,'מקס')
+    .replace(/\s+/g,' ').trim();
+}
+async function runImport(name){
+  const list = IMPORT_LISTS[name];
+  if(!list){ toast('רשימת ייבוא לא מוכרת'); return; }
+  const existing = new Set(sites.map(normSiteName));
+  const added = [], skipped = [];
+  list.forEach(s=>{
+    const n = normSiteName(s);
+    if(existing.has(n)) skipped.push(s);
+    else { sites.push(s); existing.add(n); added.push(s); }
+  });
+  if(added.length){
+    sites.sort((a,b)=>a.localeCompare(b,'he'));
+    await persistSites();
+  }
+  renderSiteFilter();
+  render();
+  alert('ייבוא סניפי מקס סטוק הושלם ✓\n\nנוספו: ' + added.length + ' סניפים\nדולגו (כבר קיימים): ' + skipped.length +
+    (skipped.length ? '\n\nהכפילויות שדולגו:\n' + skipped.join('\n') : ''));
+}
+
 (async function init(){
   setSyncChip('busy','מתחבר לענן...');
   await loadAll();   // טעינה מהירה מ-localStorage
@@ -1647,6 +1689,12 @@ document.addEventListener('keydown', e=>{
       lsSet(KEYS.sites,sites); lsSet(KEYS.types,types);
       render();
       setSyncChip('ok','מסונכרן ✓');
+      // ייבוא חד-פעמי אחרי שהנתונים מהענן נטענו — כדי שהבדיקה מול כפילויות תהיה מול המידע האמיתי
+      const importName = new URLSearchParams(location.search).get('import');
+      if(importName){
+        await runImport(importName);
+        history.replaceState(null,'',location.pathname);
+      }
     } else {
       // Firebase ריק — דחוף נתונים מקומיים
       await fbSaveNow();
