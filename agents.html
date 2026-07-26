@@ -121,6 +121,15 @@
     content:"";position:absolute;inset:3px;border-radius:50%;background:var(--bg);
     display:none;
   }
+  .talk-btn{
+    display:block;text-align:center;margin-top:10px;padding:11px 14px;
+    border-radius:12px;font-size:.9rem;font-weight:700;
+    color:#0b1020;text-decoration:none;
+    background:linear-gradient(135deg,var(--core1),var(--core2));
+    box-shadow:0 3px 14px rgba(255,159,67,.35);
+    transition:transform .15s, box-shadow .15s;
+  }
+  .talk-btn:active{transform:scale(.97)}
   .typing::after{
     content:"";display:inline-block;width:1.1em;text-align:right;
     animation:dots 1.2s steps(4) infinite;
@@ -184,6 +193,7 @@
     <span id="thinkSub" class="typing">מאזין</span>
   </div>
   <div class="steps" id="steps"></div>
+  <a id="talkBtn" class="talk-btn" href="#" target="_blank" rel="noopener">💬 דבר עם הסוכן עכשיו</a>
 </div>
 
 <script>
@@ -194,15 +204,20 @@ const agentsG=document.getElementById("agents");
 
 const AGENTS=[
  {id:"morning", name:"תדריך בוקר",  sub:"א'–ה' 6:30",  color:"var(--c-morning)", hex:"#4dd0e1",
-  steps:["קורא את הזיכרון — פרויקטים ומשימות","שולף את היומן של היום","מדרג 3 משימות לפי דחיפות","שולח תדריך + התראה לנייד"]},
+  steps:["קורא את הזיכרון — פרויקטים ומשימות","שולף את היומן של היום","מדרג 3 משימות לפי דחיפות","שולח תדריך + התראה לנייד"],
+  prompt:"הפעל את סוכן תדריך הבוקר שלי: קרא את קבצי הזיכרון על הפרויקטים והמשימות שלי, בדוק את היומן של היום, ותן לי תדריך בוקר קצר בעברית — לוח זמנים, 3 משימות בסדר עדיפות, ותזכורות לדברים פתוחים."},
  {id:"projects", name:"מעקב פרויקטים", sub:"יום א' בבוקר", color:"var(--c-projects)", hex:"#7c8cff",
-  steps:["סורק את כל הפרויקטים הפעילים","מזהה פרויקטים שלא בוקרו מזמן","בונה סטטוס + 3 עדיפויות לשבוע","שואל: מה השתנה השבוע?"]},
+  steps:["סורק את כל הפרויקטים הפעילים","מזהה פרויקטים שלא בוקרו מזמן","בונה סטטוס + 3 עדיפויות לשבוע","שואל: מה השתנה השבוע?"],
+  prompt:"הפעל את סוכן מעקב הפרויקטים שלי: קרא את קבצי הזיכרון על הפרויקטים הפעילים שלי ותן לי סטטוס בעברית — מה פתוח בכל פרויקט, אילו פרויקטים לא בוקרו מזמן, ו-3 עדיפויות לשבוע. בסוף שאל אותי מה השתנה כדי לעדכן."},
  {id:"finance", name:"חשבוניות וקבלנים", sub:"כל 25 בחודש", color:"var(--c-finance)", hex:"#66d9a3",
-  steps:["בודק אילו חשבוניות צריך להגיש","עובר על חיובי קבלני משנה","מוודא עכבון, ביטוח ושוטף+30","מרכיב רשימת פעולות לסגירת חודש"]},
+  steps:["בודק אילו חשבוניות צריך להגיש","עובר על חיובי קבלני משנה","מוודא עכבון, ביטוח ושוטף+30","מרכיב רשימת פעולות לסגירת חודש"],
+  prompt:"הפעל את סוכן הכספים שלי: קרא את קבצי הזיכרון על קבלני המשנה והפרויקטים שלי ותן לי תמונת מצב בעברית — חשבוניות שצריך להגיש ללקוחות, חיובי קבלני משנה לבדוק (עכבון 10%, ביטוח 1%), ותשלומי שוטף+30 שכדאי לוודא."},
  {id:"store", name:"חנות אונליין", sub:"יום ב' בבוקר", color:"var(--c-store)", hex:"#ff8fab",
-  steps:["בודק מה הצעד האחרון שבוצע","בוחר צעד אחד של שעה–שעתיים","מנמק למה דווקא הוא עכשיו","מציע להתחיל לבנות מיד"]},
+  steps:["בודק מה הצעד האחרון שבוצע","בוחר צעד אחד של שעה–שעתיים","מנמק למה דווקא הוא עכשיו","מציע להתחיל לבנות מיד"],
+  prompt:"הפעל את סוכן החנות אונליין שלי: קרא את קבצי הזיכרון על פרויקט החנות (מסכים, כבלים, מצלמות — ספק אמטל), תגיד לי מה הצעד האחרון שבוצע, והצע צעד אחד קונקרטי לקדם עכשיו. אם הוא דורש בנייה — תתחיל לבנות ואני אאשר."},
  {id:"growth", name:"שיפור יומי", sub:"א'–ה' 12:30", color:"var(--c-growth)", hex:"#c792ea",
-  steps:["קורא את היעדים — 4 צוותים, 30 אלף נטו","בודק מה יש היום ביומן","מתאים המלצה למצב של היום","מוסר המלצה אחת ישימה"]},
+  steps:["קורא את היעדים — 4 צוותים, 30 אלף נטו","בודק מה יש היום ביומן","מתאים המלצה למצב של היום","מוסר המלצה אחת ישימה"],
+  prompt:"הפעל את סוכן השיפור היומי שלי: קרא את קבצי הזיכרון על העסק והיעדים שלי, בדוק מה יש לי היום ביומן, ותן לי המלצת שיפור אחת ישימה להיום — קצרה, עד 10 שורות, עם דרך יישום מיידית."},
 ];
 
 const CX=300, CY=300, R=205;
@@ -300,6 +315,10 @@ function select(i, manual){
   nodes.forEach((n,j)=>n.classList.toggle("active", j===i));
   titleEl.textContent="קלוד ← "+a.name;
   subEl.textContent="חושב";
+  const btn=document.getElementById("talkBtn");
+  btn.href="https://claude.ai/new?q="+encodeURIComponent(a.prompt);
+  btn.style.background="linear-gradient(135deg,"+a.hex+",#ffd166)";
+  btn.textContent="💬 דבר עם "+a.name+" עכשיו";
   stepsEl.innerHTML="";
   a.steps.forEach(s=>{
     const div=document.createElement("div");
