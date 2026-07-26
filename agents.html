@@ -121,8 +121,26 @@
     content:"";position:absolute;inset:3px;border-radius:50%;background:var(--bg);
     display:none;
   }
+  .talk-row{display:flex;gap:10px;margin-top:10px;align-items:stretch}
+  .mic-btn{
+    flex-shrink:0;width:52px;border-radius:12px;border:1.5px solid rgba(255,209,102,.5);
+    background:rgba(255,209,102,.12);font-size:1.35rem;cursor:pointer;
+    color:var(--text);transition:all .15s;user-select:none;-webkit-user-select:none;
+    touch-action:none;
+  }
+  .mic-btn.rec{
+    background:#e5484d;border-color:#ff7b81;
+    animation:micpulse 1s ease-in-out infinite;
+  }
+  @keyframes micpulse{0%,100%{box-shadow:0 0 0 0 rgba(229,72,77,.55)}50%{box-shadow:0 0 0 10px rgba(229,72,77,0)}}
+  .mic-hint{font-size:.68rem;color:var(--muted);text-align:center;margin-top:6px}
+  .voice-text{
+    margin-top:8px;padding:8px 10px;border-radius:10px;
+    background:rgba(255,209,102,.1);border:1px dashed rgba(255,209,102,.4);
+    font-size:.82rem;line-height:1.4;
+  }
   .talk-btn{
-    display:block;text-align:center;margin-top:10px;padding:11px 14px;
+    display:block;flex:1;text-align:center;padding:11px 14px;
     border-radius:12px;font-size:.9rem;font-weight:700;
     color:#0b1020;text-decoration:none;
     background:linear-gradient(135deg,var(--core1),var(--core2));
@@ -193,7 +211,12 @@
     <span id="thinkSub" class="typing">מאזין</span>
   </div>
   <div class="steps" id="steps"></div>
-  <a id="talkBtn" class="talk-btn" href="#" target="_blank" rel="noopener">💬 דבר עם הסוכן עכשיו</a>
+  <div id="voiceText" class="voice-text" style="display:none"></div>
+  <div class="talk-row">
+    <button id="micBtn" class="mic-btn" title="החזק ודבר">🎤</button>
+    <a id="talkBtn" class="talk-btn" href="#" target="_blank" rel="noopener">💬 דבר עם הסוכן עכשיו</a>
+  </div>
+  <div id="micHint" class="mic-hint">החזק את המיקרופון, דבר, ושחרר — מה שתגיד יצורף להודעה לסוכן</div>
 </div>
 
 <script>
@@ -315,10 +338,8 @@ function select(i, manual){
   nodes.forEach((n,j)=>n.classList.toggle("active", j===i));
   titleEl.textContent="קלוד ← "+a.name;
   subEl.textContent="חושב";
-  const btn=document.getElementById("talkBtn");
-  btn.href="https://claude.ai/new?q="+encodeURIComponent(a.prompt);
-  btn.style.background="linear-gradient(135deg,"+a.hex+",#ffd166)";
-  btn.textContent="💬 דבר עם "+a.name+" עכשיו";
+  transcript="";
+  updateTalkLink();
   stepsEl.innerHTML="";
   a.steps.forEach(s=>{
     const div=document.createElement("div");
@@ -342,6 +363,67 @@ function select(i, manual){
   });
   // auto-advance to next agent
   timer=setTimeout(()=>select((i+1)%AGENTS.length,false), 600+items.length*1500+2600);
+}
+
+/* ---- talk link + push-to-talk ---- */
+const talkBtn=document.getElementById("talkBtn");
+const micBtn=document.getElementById("micBtn");
+const micHint=document.getElementById("micHint");
+const voiceText=document.getElementById("voiceText");
+let transcript="";
+
+function updateTalkLink(){
+  if(current<0)return;
+  const a=AGENTS[current];
+  let msg=a.prompt;
+  if(transcript.trim()){
+    msg+="\n\nוזה מה שחשוב לי עכשיו במילים שלי: "+transcript.trim();
+    voiceText.style.display="block";
+    voiceText.textContent="🎤 "+transcript.trim();
+    talkBtn.textContent="🚀 שלח לקלוד את מה שאמרת";
+  }else{
+    voiceText.style.display="none";
+    talkBtn.textContent="💬 דבר עם "+a.name+" עכשיו";
+  }
+  talkBtn.href="https://claude.ai/new?q="+encodeURIComponent(msg);
+  talkBtn.style.background="linear-gradient(135deg,"+a.hex+",#ffd166)";
+}
+
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+if(!SR){
+  micBtn.style.display="none";
+  micHint.textContent="הדפדפן הזה לא תומך בזיהוי דיבור — הכפתור ייפתח עם הודעה מוכנה להקלטה בתוך קלוד";
+}else{
+  let rec=null, listening=false;
+  function startRec(){
+    if(listening)return;
+    listening=true;
+    transcript="";
+    rec=new SR();
+    rec.lang="he-IL";
+    rec.continuous=true;
+    rec.interimResults=true;
+    rec.onresult=(e)=>{
+      let t="";
+      for(let i=0;i<e.results.length;i++) t+=e.results[i][0].transcript;
+      transcript=t;
+      voiceText.style.display="block";
+      voiceText.textContent="🎤 "+t;
+    };
+    rec.onerror=()=>{ stopRec(); };
+    rec.onend=()=>{ listening=false; micBtn.classList.remove("rec"); updateTalkLink(); };
+    micBtn.classList.add("rec");
+    micHint.textContent="מקליט... שחרר כשסיימת";
+    rec.start();
+  }
+  function stopRec(){
+    micHint.textContent="החזק את המיקרופון, דבר, ושחרר — מה שתגיד יצורף להודעה לסוכן";
+    if(rec){try{rec.stop()}catch(e){}}
+  }
+  micBtn.addEventListener("pointerdown",(e)=>{e.preventDefault();startRec();});
+  micBtn.addEventListener("pointerup",stopRec);
+  micBtn.addEventListener("pointercancel",stopRec);
+  micBtn.addEventListener("pointerleave",stopRec);
 }
 
 /* stars */
