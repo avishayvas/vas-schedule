@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>מרכז הסוכנים של אבישי</title>
+<link rel="manifest" href="agents-manifest.json">
+<link rel="apple-touch-icon" href="agents-icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="agents-icon-192.png">
+<meta name="theme-color" content="#070b16">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="הסוכנים שלי">
+<style>
+  :root{
+    --bg:#070b16;
+    --core1:#ffd166;
+    --core2:#ff9f43;
+    --text:#eaf0ff;
+    --muted:#8b96b8;
+    --c-morning:#4dd0e1;
+    --c-projects:#7c8cff;
+    --c-finance:#66d9a3;
+    --c-store:#ff8fab;
+    --c-growth:#c792ea;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden}
+  body{
+    background:radial-gradient(1200px 800px at 50% 30%, #0d1530 0%, var(--bg) 60%);
+    font-family:"Heebo","Segoe UI",Arial,sans-serif;
+    color:var(--text);
+    display:flex;flex-direction:column;
+  }
+  /* starfield */
+  .stars{position:fixed;inset:0;pointer-events:none;z-index:0}
+  .star{position:absolute;border-radius:50%;background:#fff;opacity:.25;animation:twinkle 4s ease-in-out infinite}
+  @keyframes twinkle{0%,100%{opacity:.08}50%{opacity:.45}}
+
+  header{
+    text-align:center;padding:14px 16px 4px;z-index:2;position:relative;
+  }
+  header h1{font-size:1.15rem;font-weight:700;letter-spacing:.5px}
+  header p{font-size:.75rem;color:var(--muted);margin-top:2px}
+
+  .stage{
+    flex:1;position:relative;z-index:1;min-height:0;
+    display:flex;align-items:center;justify-content:center;
+  }
+  svg{width:100%;height:100%;max-width:560px;display:block}
+
+  /* ---- SVG styling ---- */
+  .flow-path{fill:none;stroke-width:1.4;opacity:.35}
+  .flow-dash{
+    fill:none;stroke-width:2;stroke-linecap:round;
+    stroke-dasharray:4 14;
+    animation:dashmove 2.6s linear infinite;
+    opacity:.9;
+  }
+  @keyframes dashmove{to{stroke-dashoffset:-72}}
+  .flow-dash.rev{animation:dashmoverev 3.4s linear infinite;opacity:.5;stroke-dasharray:2 20}
+  @keyframes dashmoverev{to{stroke-dashoffset:72}}
+
+  .core-pulse{transform-origin:center;animation:corepulse 3.2s ease-in-out infinite}
+  @keyframes corepulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+  .ring{fill:none;stroke:var(--core1);transform-origin:center;opacity:0;animation:ringout 4s ease-out infinite}
+  .ring.r2{animation-delay:1.3s}
+  .ring.r3{animation-delay:2.6s}
+  @keyframes ringout{
+    0%{transform:scale(.55);opacity:.5;stroke-width:2}
+    100%{transform:scale(1.9);opacity:0;stroke-width:.3}
+  }
+  .agent-node{cursor:pointer}
+  .agent-node circle.bubble{transition:all .25s}
+  .agent-node.active circle.bubble{stroke-width:2.5;filter:brightness(1.35)}
+  .agent-node text{pointer-events:none}
+  .node-float{animation:floaty 5s ease-in-out infinite}
+  @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+
+  .spin-slow{transform-origin:center;animation:spin 26s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ---- thinking panel ---- */
+  .think{
+    z-index:2;position:relative;
+    margin:0 14px 14px;padding:12px 16px;
+    background:rgba(15,22,45,.82);
+    border:1px solid rgba(124,140,255,.25);
+    border-radius:16px;
+    backdrop-filter:blur(8px);
+    min-height:92px;
+  }
+  .think .who{
+    display:flex;align-items:center;gap:8px;margin-bottom:6px;
+  }
+  .think .dot-core{
+    width:10px;height:10px;border-radius:50%;
+    background:radial-gradient(circle at 35% 35%, var(--core1), var(--core2));
+    box-shadow:0 0 10px var(--core2);
+    animation:corepulse 1.6s ease-in-out infinite;
+  }
+  .think .who b{font-size:.85rem}
+  .think .who span{font-size:.72rem;color:var(--muted)}
+  .steps{display:flex;flex-direction:column;gap:4px}
+  .step{
+    display:flex;align-items:center;gap:8px;
+    font-size:.8rem;color:var(--muted);
+    opacity:.35;transition:all .4s;
+  }
+  .step .tick{
+    width:14px;height:14px;border-radius:50%;flex-shrink:0;
+    border:1.5px solid var(--muted);position:relative;transition:all .4s;
+  }
+  .step.doing{opacity:1;color:var(--text)}
+  .step.doing .tick{border-color:var(--core1);animation:tickpulse 1s ease-in-out infinite}
+  @keyframes tickpulse{0%,100%{box-shadow:0 0 0 0 rgba(255,209,102,.5)}50%{box-shadow:0 0 0 5px rgba(255,209,102,0)}}
+  .step.done{opacity:.75}
+  .step.done .tick{border-color:var(--c-finance);background:var(--c-finance)}
+  .step.done .tick::after{
+    content:"";position:absolute;inset:3px;border-radius:50%;background:var(--bg);
+    display:none;
+  }
+  .typing::after{
+    content:"";display:inline-block;width:1.1em;text-align:right;
+    animation:dots 1.2s steps(4) infinite;
+  }
+  @keyframes dots{0%{content:""}25%{content:"·"}50%{content:"··"}75%{content:"···"}}
+</style>
+</head>
+<body>
+<div class="stars" id="stars"></div>
+
+<header>
+  <h1>מרכז הבקרה — קלוד והסוכנים שלך</h1>
+  <p>לחיצה על סוכן מציגה את תהליך החשיבה שלו</p>
+</header>
+
+<div class="stage">
+<svg viewBox="0 0 600 600" id="net" aria-label="מפת סוכנים">
+  <defs>
+    <radialGradient id="coreGrad" cx="38%" cy="35%">
+      <stop offset="0%" stop-color="#fff3cf"/>
+      <stop offset="45%" stop-color="#ffd166"/>
+      <stop offset="100%" stop-color="#ff9f43"/>
+    </radialGradient>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="7" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="softglow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="3.5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- orbit guide -->
+  <g class="spin-slow" opacity=".18">
+    <circle cx="300" cy="300" r="205" fill="none" stroke="#7c8cff" stroke-width="1" stroke-dasharray="1 9"/>
+  </g>
+
+  <g id="links"></g>
+
+  <!-- core pulses -->
+  <circle class="ring" cx="300" cy="300" r="60"/>
+  <circle class="ring r2" cx="300" cy="300" r="60"/>
+  <circle class="ring r3" cx="300" cy="300" r="60"/>
+
+  <!-- core -->
+  <g class="core-pulse" filter="url(#glow)">
+    <circle cx="300" cy="300" r="58" fill="url(#coreGrad)"/>
+    <text x="300" y="294" text-anchor="middle" font-size="19" font-weight="800" fill="#3a2400">קלוד</text>
+    <text x="300" y="316" text-anchor="middle" font-size="11" font-weight="600" fill="#5c3d00">המוח המרכזי</text>
+  </g>
+
+  <g id="agents"></g>
+</svg>
+</div>
+
+<div class="think">
+  <div class="who">
+    <div class="dot-core"></div>
+    <b id="thinkTitle">תהליך חשיבה חי</b>
+    <span id="thinkSub" class="typing">מאזין</span>
+  </div>
+  <div class="steps" id="steps"></div>
+</div>
+
+<script>
+const NS="http://www.w3.org/2000/svg";
+const svg=document.getElementById("net");
+const linksG=document.getElementById("links");
+const agentsG=document.getElementById("agents");
+
+const AGENTS=[
+ {id:"morning", name:"תדריך בוקר",  sub:"א'–ה' 6:30",  color:"var(--c-morning)", hex:"#4dd0e1",
+  steps:["קורא את הזיכרון — פרויקטים ומשימות","שולף את היומן של היום","מדרג 3 משימות לפי דחיפות","שולח תדריך + התראה לנייד"]},
+ {id:"projects", name:"מעקב פרויקטים", sub:"יום א' בבוקר", color:"var(--c-projects)", hex:"#7c8cff",
+  steps:["סורק את כל הפרויקטים הפעילים","מזהה פרויקטים שלא בוקרו מזמן","בונה סטטוס + 3 עדיפויות לשבוע","שואל: מה השתנה השבוע?"]},
+ {id:"finance", name:"חשבוניות וקבלנים", sub:"כל 25 בחודש", color:"var(--c-finance)", hex:"#66d9a3",
+  steps:["בודק אילו חשבוניות צריך להגיש","עובר על חיובי קבלני משנה","מוודא עכבון, ביטוח ושוטף+30","מרכיב רשימת פעולות לסגירת חודש"]},
+ {id:"store", name:"חנות אונליין", sub:"יום ב' בבוקר", color:"var(--c-store)", hex:"#ff8fab",
+  steps:["בודק מה הצעד האחרון שבוצע","בוחר צעד אחד של שעה–שעתיים","מנמק למה דווקא הוא עכשיו","מציע להתחיל לבנות מיד"]},
+ {id:"growth", name:"שיפור יומי", sub:"א'–ה' 12:30", color:"var(--c-growth)", hex:"#c792ea",
+  steps:["קורא את היעדים — 4 צוותים, 30 אלף נטו","בודק מה יש היום ביומן","מתאים המלצה למצב של היום","מוסר המלצה אחת ישימה"]},
+];
+
+const CX=300, CY=300, R=205;
+const nodes=[];
+
+AGENTS.forEach((a,i)=>{
+  const ang=-90 + i*(360/AGENTS.length);
+  const rad=ang*Math.PI/180;
+  const x=CX+R*Math.cos(rad), y=CY+R*Math.sin(rad);
+  a.x=x; a.y=y;
+
+  // curved path core -> agent
+  const mx=(CX+x)/2 + (y-CY)*0.22;
+  const my=(CY+y)/2 - (x-CX)*0.22;
+  const d=`M ${CX} ${CY} Q ${mx} ${my} ${x} ${y}`;
+
+  const base=document.createElementNS(NS,"path");
+  base.setAttribute("d",d); base.setAttribute("class","flow-path");
+  base.setAttribute("stroke",a.hex);
+  linksG.appendChild(base);
+
+  const dash=document.createElementNS(NS,"path");
+  dash.setAttribute("d",d); dash.setAttribute("class","flow-dash");
+  dash.setAttribute("stroke",a.hex);
+  dash.style.animationDuration=(2.2+i*0.35)+"s";
+  linksG.appendChild(dash);
+
+  const rev=document.createElementNS(NS,"path");
+  rev.setAttribute("d",d); rev.setAttribute("class","flow-dash rev");
+  rev.setAttribute("stroke","#ffd166");
+  rev.style.animationDuration=(3.1+i*0.4)+"s";
+  linksG.appendChild(rev);
+
+  // travelling spark
+  const spark=document.createElementNS(NS,"circle");
+  spark.setAttribute("r","3.4"); spark.setAttribute("fill","#ffffff");
+  spark.setAttribute("filter","url(#softglow)");
+  const mo=document.createElementNS(NS,"animateMotion");
+  mo.setAttribute("dur",(3+i*0.6)+"s");
+  mo.setAttribute("repeatCount","indefinite");
+  mo.setAttribute("path",d);
+  spark.appendChild(mo);
+  linksG.appendChild(spark);
+
+  // node
+  const g=document.createElementNS(NS,"g");
+  g.setAttribute("class","agent-node node-float");
+  g.style.animationDelay=(i*0.7)+"s";
+  g.dataset.idx=i;
+
+  const halo=document.createElementNS(NS,"circle");
+  halo.setAttribute("cx",x); halo.setAttribute("cy",y); halo.setAttribute("r","46");
+  halo.setAttribute("fill",a.hex); halo.setAttribute("opacity","0.10");
+  g.appendChild(halo);
+
+  const c=document.createElementNS(NS,"circle");
+  c.setAttribute("class","bubble");
+  c.setAttribute("cx",x); c.setAttribute("cy",y); c.setAttribute("r","40");
+  c.setAttribute("fill","#0f1730");
+  c.setAttribute("stroke",a.hex); c.setAttribute("stroke-width","1.6");
+  c.setAttribute("filter","url(#softglow)");
+  g.appendChild(c);
+
+  const t1=document.createElementNS(NS,"text");
+  t1.setAttribute("x",x); t1.setAttribute("y",y-2);
+  t1.setAttribute("text-anchor","middle"); t1.setAttribute("font-size","12.5");
+  t1.setAttribute("font-weight","700"); t1.setAttribute("fill","#eaf0ff");
+  t1.textContent=a.name;
+  g.appendChild(t1);
+
+  const t2=document.createElementNS(NS,"text");
+  t2.setAttribute("x",x); t2.setAttribute("y",y+15);
+  t2.setAttribute("text-anchor","middle"); t2.setAttribute("font-size","10");
+  t2.setAttribute("fill","#8b96b8");
+  t2.textContent=a.sub;
+  g.appendChild(t2);
+
+  g.addEventListener("click",()=>select(i,true));
+  agentsG.appendChild(g);
+  nodes.push(g);
+});
+
+/* ---- thinking panel logic ---- */
+const stepsEl=document.getElementById("steps");
+const titleEl=document.getElementById("thinkTitle");
+const subEl=document.getElementById("thinkSub");
+let current=-1, timer=null, stepTimers=[];
+
+function clearTimers(){ if(timer)clearTimeout(timer); stepTimers.forEach(clearTimeout); stepTimers=[]; }
+
+function select(i, manual){
+  clearTimers();
+  current=i;
+  const a=AGENTS[i];
+  nodes.forEach((n,j)=>n.classList.toggle("active", j===i));
+  titleEl.textContent="קלוד ← "+a.name;
+  subEl.textContent="חושב";
+  stepsEl.innerHTML="";
+  a.steps.forEach(s=>{
+    const div=document.createElement("div");
+    div.className="step";
+    div.innerHTML='<div class="tick"></div><span>'+s+'</span>';
+    stepsEl.appendChild(div);
+  });
+  const items=[...stepsEl.children];
+  items.forEach((el,k)=>{
+    stepTimers.push(setTimeout(()=>{
+      items.forEach(e=>e.classList.remove("doing"));
+      if(k>0)items[k-1].classList.add("done");
+      el.classList.add("doing");
+      if(k===items.length-1){
+        stepTimers.push(setTimeout(()=>{
+          el.classList.remove("doing"); el.classList.add("done");
+          subEl.textContent="מוכן";
+        },1400));
+      }
+    }, 600+k*1500));
+  });
+  // auto-advance to next agent
+  timer=setTimeout(()=>select((i+1)%AGENTS.length,false), 600+items.length*1500+2600);
+}
+
+/* stars */
+const starsEl=document.getElementById("stars");
+for(let i=0;i<40;i++){
+  const s=document.createElement("div");
+  s.className="star";
+  const sz=(Math.random()*2+1);
+  s.style.cssText=`width:${sz}px;height:${sz}px;top:${Math.random()*100}%;left:${Math.random()*100}%;animation-delay:${Math.random()*4}s`;
+  starsEl.appendChild(s);
+}
+
+select(0,false);
+</script>
+</body>
+</html>
